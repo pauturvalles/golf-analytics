@@ -876,20 +876,29 @@
      scrolling; both tables share an identical <colgroup> so columns line up
      exactly, and the header is simply never part of the scrolling paint
      region, so there's nothing for it to fall out of sync with.
-     Mobile fix: `overflow-y: auto` on `.rounds-body-scroll` makes the
-     browser treat its own `overflow-x` as `auto` too (CSS Overflow spec:
-     when one axis is non-visible the other can't stay `visible`), which on
-     a narrow viewport gives this div its OWN independent horizontal
-     scrollbar -- separate from the outer `.rounds-scroll` card's scrollbar
-     that the header table relies on. A touch-drag on the row list then
-     scrolls only the body while the header stays put ("se descuadra").
-     Fix: give this div the same width as `.rounds-table`, so its own
-     content never overflows ITS box -- there is nothing left for its
-     auto-computed overflow-x to ever trigger on, and the horizontal
-     overflow (and its single scrollbar) happens where it should, one level
-     up, moving header and body together as one. */
-  .rounds-table { table-layout: fixed; width: 880px; border-collapse: collapse; }
-  .rounds-body-scroll { width: 880px; max-height: 280px; overflow-y: auto; }
+     Single scrollbar, take two: an earlier version made `.rounds-body-scroll`
+     and the header table the same fixed pixel width, relying on the OUTER
+     `.rounds-scroll` card to be the only element that scrolls horizontally.
+     That broke as soon as the body's vertical scrollbar (`overflow-y: auto`,
+     needed once rows exceed `max-height`) actually appeared: on a classic
+     (space-reserving) scrollbar -- Windows Chrome/Firefox by default, unlike
+     macOS/touch overlay scrollbars -- the vertical scrollbar eats ~15-17px of
+     width from `.rounds-body-scroll`'s own content box, which no fixed pixel
+     width can predict (it ranges from 0 to ~17px depending on OS/browser).
+     That left the body table a few px too wide for its own shrunken box,
+     handing `.rounds-body-scroll` a second, independent horizontal
+     scrollbar of its own -- exactly the "veo doble scroll" Pau reported,
+     still present after the first pixel-matching fix.
+     The robust fix doesn't try to predict scrollbar width at all: only
+     `.rounds-body-scroll` scrolls horizontally (and vertically) for real --
+     `.rounds-head-scroll` above it has `overflow: hidden`, so it can never
+     show its own bar, and JS (see bindRoundsHeaderScrollSync) mirrors the
+     body's scrollLeft onto it on every scroll event. Header and body always
+     end up at the same horizontal offset, with exactly one visible
+     scrollbar, regardless of what the vertical scrollbar happens to cost. */
+  .rounds-table { table-layout: fixed; width: 915px; border-collapse: collapse; }
+  .rounds-head-scroll { overflow: hidden; }
+  .rounds-body-scroll { max-height: 280px; overflow: auto; }
   tr.round-row { cursor: pointer; }
   tr.round-row:hover td { background: var(--surface-2); }
   tr.round-row.selected td { background: color-mix(in srgb, var(--tee) 13%, var(--surface)); }
@@ -1347,25 +1356,27 @@
 
   <section>
     <div class="section-head">
-      <h2><span class="tip-trigger" tabindex="0"><span>Rondas</span><span class="info-dot">i</span><span class="info-tooltip">Todas las rondas de esta selección, más recientes primero &mdash; haz scroll para ver las anteriores. <b>Par</b>, <b>Gross</b>, <b>Net</b>, <b>Stableford</b> y <b>Hcp</b> son las cifras oficiales de Shot Scope para la ronda completa. <b>Problema principal</b> lista las categorías de SG (Tee/Approach/Short Game/Putting) en &le; -2 SG en esa ronda &mdash; puede haber varias o ninguna. Haz clic en una fila para ver su detalle completo debajo.</span></span></h2>
+      <h2><span class="tip-trigger" tabindex="0"><span>Rondas</span><span class="info-dot">i</span><span class="info-tooltip">Todas las rondas de esta selección, más recientes primero &mdash; haz scroll para ver las anteriores. <b>Par</b>, <b>Gross</b>, <b>Net</b>, <b>Stableford</b> y <b>Hcp</b> son las cifras oficiales de Shot Scope para la ronda completa. <b>Dif.</b> es el diferencial de puntuación oficial del WHS de esa ronda -- (113/Slope) × (Resultado ajustado &minus; Valor de Campo), NO simplemente Gross &minus; Par (eso ignoraría la dificultad del campo y el tope de Net Double Bogey por hoyo) -- el mismo cálculo que alimenta "Nivel jugado" y "Hándicap calculado" en el Resumen; vueltas de 9 hoyos usan la misma aproximación de doblado que esos dos. <b>Problema principal</b> lista las categorías de SG (Tee/Approach/Short Game/Putting) en &le; -2 SG en esa ronda &mdash; puede haber varias o ninguna. Haz clic en una fila para ver su detalle completo debajo.</span></span></h2>
     </div>
-    <div class="card table-scroll rounds-scroll">
-      <table class="rounds-table">
-        <colgroup>
-          <col style="width:90px"><col style="width:170px"><col style="width:60px"><col style="width:55px">
-          <col style="width:55px"><col style="width:65px"><col style="width:65px"><col style="width:85px">
-          <col style="width:75px"><col style="width:160px">
-        </colgroup>
-        <thead>
-          <tr><th>Fecha</th><th>Campo</th><th class="num">Hoyos</th><th class="num">Par</th><th class="num">Hcp</th><th class="num">Gross</th><th class="num">Net</th><th class="num">Stableford</th><th class="num">SG Total</th><th>Problema principal</th></tr>
-        </thead>
-      </table>
-      <div class="rounds-body-scroll">
+    <div class="card rounds-scroll">
+      <div class="rounds-head-scroll" id="roundsHeadScroll">
+        <table class="rounds-table" id="roundsListHeadTable">
+          <colgroup>
+            <col style="width:90px"><col style="width:145px"><col style="width:60px"><col style="width:55px">
+            <col style="width:55px"><col style="width:65px"><col style="width:65px"><col style="width:85px">
+            <col style="width:75px"><col style="width:60px"><col style="width:160px">
+          </colgroup>
+          <thead>
+            <tr><th>Fecha</th><th>Campo</th><th class="num">Hoyos</th><th class="num">Par</th><th class="num">Hcp</th><th class="num">Gross</th><th class="num">Net</th><th class="num">Stableford</th><th class="num">SG Total</th><th class="num">Dif.</th><th>Problema principal</th></tr>
+          </thead>
+        </table>
+      </div>
+      <div class="rounds-body-scroll" id="roundsBodyScroll">
         <table class="rounds-table">
           <colgroup>
-            <col style="width:90px"><col style="width:170px"><col style="width:60px"><col style="width:55px">
+            <col style="width:90px"><col style="width:145px"><col style="width:60px"><col style="width:55px">
             <col style="width:55px"><col style="width:65px"><col style="width:65px"><col style="width:85px">
-            <col style="width:75px"><col style="width:160px">
+            <col style="width:75px"><col style="width:60px"><col style="width:160px">
           </colgroup>
           <tbody id="roundsListBody"></tbody>
         </table>
@@ -1698,12 +1709,12 @@
 
   <section>
     <div class="section-head">
-      <h2><span class="tip-trigger" tabindex="0"><span>Campos</span><span class="info-dot">i</span><span class="info-tooltip">Un campo por fila (los tres recorridos de La Sella cuentan como campos separados, igual que en el filtro de Campo de arriba). <b>Par</b>, <b>Gross</b> y <b>Net</b> son la media de esa parte del campo en cada visita (vs. par); si una ronda combina dos recorridos, cada uno cuenta solo su propia parte. <b>SG Total</b> y <b>GIR %</b> están restringidos a los hoyos de este campo dentro de cada visita. <b>Problema principal</b> = categorías de SG (Tee/Approach/Short Game/Putting) cuya media por visita es &le; -2 SG. Haz clic en una fila para ver su detalle debajo.</span></span></h2>
+      <h2><span class="tip-trigger" tabindex="0"><span>Campos</span><span class="info-dot">i</span><span class="info-tooltip">Un campo por fila (los tres recorridos de La Sella cuentan como campos separados, igual que en el filtro de Campo de arriba). <b>Par</b>, <b>Gross</b>, <b>Net</b>, <b>Stableford</b> y <b>SG Total</b> son la media de esa parte del campo en cada visita (vs. par); si una ronda combina dos recorridos, cada uno cuenta solo su propia parte. Si un campo tiene visitas de 9 y 18 hoyos mezcladas (marcado con "norm. 18h" -- hoy en día, solo Oliva Nova), esos cinco se normalizan a un equivalente de 18 hoyos por visita antes de promediar, para que no salgan valores sin sentido a medio camino entre una vuelta de 9 y una de 18. <b>GIR %</b> está restringido a los hoyos de este campo dentro de cada visita (ya es un porcentaje por hoyo, no necesita normalizarse). <b>Nivel jugado</b> es el diferencial de puntuación oficial del WHS (el mismo que en la portada), promediado sobre las visitas a este campo. <b>Problema principal</b> = categorías de SG (Tee/Approach/Short Game/Putting) cuya media por visita es &le; -2 SG. Haz clic en una fila para ver su detalle debajo.</span></span></h2>
     </div>
     <div class="card table-scroll">
       <table id="coursesTable">
         <thead>
-          <tr><th>Campo</th><th class="num">N</th><th class="num">Par</th><th class="num">Gross</th><th class="num">Net</th><th class="num">Stableford</th><th class="num">SG Total</th><th class="num">GIR %</th><th>Problema principal</th></tr>
+          <tr><th>Campo</th><th class="num">N</th><th class="num">Par</th><th class="num">Gross</th><th class="num">Net</th><th class="num">Stableford</th><th class="num">SG Total</th><th class="num">GIR %</th><th class="num">Nivel jugado</th><th>Problema principal</th></tr>
         </thead>
         <tbody id="coursesListBody"></tbody>
       </table>
@@ -1717,6 +1728,7 @@
     <p class="section-note" id="courseDetailEmpty">Selecciona un campo de la tabla de arriba para ver su detalle.</p>
     <div id="courseDetailPanel" hidden>
       <p class="round-detail-head" id="courseDetailHead"></p>
+      <p class="win-note" id="courseDetailNormNote" style="text-transform:none;letter-spacing:normal;margin:-8px 0 14px"></p>
 
       <div class="two-col-grid" style="margin-bottom:28px">
         <div class="card card-sgbars">
@@ -2004,10 +2016,20 @@ function fmtDateShort(d){ if (!d) return '—'; const m = /^(\d{4})-(\d{2})-(\d{
 // rows are selected/filtered.
 const sortState = {}; // tableId -> {key, dir:'asc'|'desc'}
 const sortColumnsByTable = {};
-function setupSortableTable(tableId, columns, rerenderFn){
+// Normally the <thead> lives in the same <table> as the tbody being sorted,
+// so `tbody.closest('table')` finds it. The Rondas list is the one
+// exception (see the comment by .rounds-table): its header lives in its
+// own separate sibling <table> so the header never repaints during the
+// body's scroll. `headTableId`, when given, points straight at that
+// header-only table instead of relying on `closest`. Stored per tableId so
+// updateSortHeaderUI (called on every render, not just once at setup) can
+// find the same header without needing that argument passed in again.
+const headTableByTable = {};
+function setupSortableTable(tableId, columns, rerenderFn, headTableId){
   sortColumnsByTable[tableId] = columns;
   const tbody = document.getElementById(tableId);
-  const table = tbody && tbody.closest('table');
+  const table = headTableId ? document.getElementById(headTableId) : (tbody && tbody.closest('table'));
+  headTableByTable[tableId] = table;
   const headRow = table && table.querySelector('thead tr');
   if (!headRow) return;
   const ths = headRow.querySelectorAll('th');
@@ -2035,8 +2057,7 @@ function setupSortableTable(tableId, columns, rerenderFn){
 function updateSortHeaderUI(tableId){
   const columns = sortColumnsByTable[tableId];
   const state = sortState[tableId];
-  const tbody = document.getElementById(tableId);
-  const table = tbody && tbody.closest('table');
+  const table = headTableByTable[tableId];
   const headRow = table && table.querySelector('thead tr');
   if (!headRow || !columns) return;
   const ths = headRow.querySelectorAll('th');
@@ -5918,14 +5939,45 @@ let selectedRoundIdx = null;
 let roundCmpWindow = 'all'; // 'recent1'|'recent3'|'recent5'|'recent10'|'all' -- baseline window, same semantics as lrsWindow but relative to whichever round is selected, not always the last
 let roundRadarWindow = 'recent10'; // same semantics, independent selector for the Rondas-tab radar (sits above the round detail, not tied to the comparison table)
 
+// Keeps the Rondas header table's horizontal scroll position mirrored to the
+// scrolling body table below it -- see the CSS comment by .rounds-head-scroll
+// for why this is what actually makes a single scrollbar work reliably
+// (matching pixel widths across the two containers can't account for a
+// vertical scrollbar's variable width). Both elements are static (never
+// rebuilt by render()), so this only needs binding once at setup.
+function bindRoundsHeaderScrollSync(){
+  const head = document.getElementById('roundsHeadScroll');
+  const body = document.getElementById('roundsBodyScroll');
+  if (!head || !body) return;
+  body.addEventListener('scroll', () => { head.scrollLeft = body.scrollLeft; });
+}
+
+// Un accessor por columna del <thead> de #roundsListBody, en el mismo orden
+// (ver el <thead> de "Rondas" en el HTML). `null` no está permitido aquí --
+// las 11 columnas son sorteables, incluida "Problema principal" como texto.
+const ROUNDS_LIST_SORT_COLUMNS = [
+  {key:'date', accessor:r=>r.d, numeric:false, initialDir:'desc'},
+  {key:'course', accessor:r=>(r.rc||[]).map(rc=>REAL_COURSE_LABEL[rc]||rc).join(' + '), numeric:false, initialDir:'asc'},
+  {key:'holes', accessor:r=>r.nh, numeric:true, initialDir:'desc'},
+  {key:'par', accessor:r=>ROUND_PAR_BY_IDX[r.idx], numeric:true, initialDir:'desc'},
+  {key:'hcp', accessor:r=>r.hcp, numeric:true, initialDir:'asc'},
+  {key:'gross', accessor:r=>{ const par=ROUND_PAR_BY_IDX[r.idx]; return (par!==undefined&&par!==null) ? r.gr-par : null; }, numeric:true, initialDir:'asc'},
+  {key:'net', accessor:r=>{ const par=ROUND_PAR_BY_IDX[r.idx]; return (par!==undefined&&par!==null) ? r.net-par : null; }, numeric:true, initialDir:'asc'},
+  {key:'stb', accessor:r=>r.stb, numeric:true, initialDir:'desc'},
+  {key:'sg', accessor:r=>r.sg_total, numeric:true, initialDir:'desc'},
+  {key:'diff', accessor:r=>scoreDifferentialForRound(r, r.idx), numeric:true, initialDir:'asc'},
+  {key:'issues', accessor:r=>mainIssuesForRound(r.idx).join(', '), numeric:false, initialDir:'asc'},
+];
+
 function renderRoundsListTable(rounds){
   const tbody = document.getElementById('roundsListBody');
   tbody.innerHTML = '';
   if (!rounds.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="10">No hay rondas en esta selección.</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="11">No hay rondas en esta selección.</td></tr>';
     return;
   }
-  const rows = rounds.slice().reverse(); // most recent first, per Pau's spec
+  const defaultOrder = rounds.slice().reverse(); // most recent first, per Pau's spec -- kept as the built-in order until a header is clicked
+  const rows = sortRows('roundsListBody', defaultOrder, ROUNDS_LIST_SORT_COLUMNS);
   rows.forEach(r => {
     const tr = document.createElement('tr');
     tr.className = 'round-row' + (r.idx===selectedRoundIdx ? ' selected' : '');
@@ -5936,6 +5988,7 @@ function renderRoundsListTable(rounds){
     const par = ROUND_PAR_BY_IDX[r.idx];
     const grToPar = par!==undefined && par!==null ? r.gr-par : null;
     const netToPar = par!==undefined && par!==null ? r.net-par : null;
+    const diff = scoreDifferentialForRound(r, r.idx);
     // Icono de trofeo para rondas marcadas como torneo/competición (r.tc,
     // ver TOURNAMENT_DATES en build_dashboard_data.py) -- a petición de
     // Pau, para poder identificarlas de un vistazo en la lista.
@@ -5943,6 +5996,7 @@ function renderRoundsListTable(rounds){
     tr.innerHTML = `<td class="date-cell">${tournBadge}${fmtDateShort(r.d)}</td><td>${courseLabel}</td><td class="num">${r.nh}</td><td class="num">${par??'—'}</td>
       <td class="num">${r.hcp}</td><td class="num">${fmtToPar(grToPar)}</td><td class="num">${fmtToPar(netToPar)}</td><td class="num">${r.stb}</td>
       <td class="num" style="color:${r.sg_total>=0?'var(--good)':'var(--critical)'}">${fmtSigned(r.sg_total,2)}</td>
+      <td class="num">${diff===null?'—':diff.toFixed(1)}</td>
       <td>${issuesTxt}</td>`;
     const select = () => { selectedRoundIdx = r.idx; render(); };
     tr.addEventListener('click', select);
@@ -5957,7 +6011,9 @@ function renderRoundDetailHeader(rRound){
   const par = ROUND_PAR_BY_IDX[rRound.idx];
   const grTxt = par!==undefined && par!==null ? fmtToPar(rRound.gr-par) : rRound.gr;
   const netTxt = par!==undefined && par!==null ? fmtToPar(rRound.net-par) : rRound.net;
-  el.textContent = `${rRound.d} · ${courseLabel} · ${rRound.nh} holes · Hcp ${rRound.hcp} · Gross ${grTxt} · Net ${netTxt} · Stableford ${rRound.stb} · SG Total ${fmtSigned(rRound.sg_total,2)}`;
+  const diff = scoreDifferentialForRound(rRound, rRound.idx);
+  const diffTxt = diff===null ? '—' : diff.toFixed(1);
+  el.textContent = `${rRound.d} · ${courseLabel} · ${rRound.nh} holes · Hcp ${rRound.hcp} · Gross ${grTxt} · Net ${netTxt} · Stableford ${rRound.stb} · SG Total ${fmtSigned(rRound.sg_total,2)} · Dif. ${diffTxt}`;
 }
 
 // Repeats "Fecha · Campo" next to the title of the 3 round-detail sections
@@ -6532,19 +6588,72 @@ function computeCourseVisitStats(rc, rounds, holes, shots){
   return {rc, courseHoles, courseShots, visitingRounds, sgByIdx, exByIdx};
 }
 
+// Cuántos hoyos de ESTE campo se jugaron en cada visita (ronda), y si ese
+// campo mezcla visitas de distinto número de hoyos -- hoy en día, de los 12
+// campos del histórico, SOLO Oliva Nova (6 visitas de 9 + 3 de 18; el resto
+// siempre se juega igual: los recorridos de La Sella y Altea son de 9 hoyos
+// por naturaleza -- no una vuelta parcial de un campo de 18 -- y el resto
+// siempre completa las 18). Promediar totales brutos (par/gross/stableford/
+// SG) por visita solo tiene sentido cuando todas las visitas pesan igual;
+// mezclando 9 y 18 sale un valor sin sentido (p.ej. "Par 48" en Oliva Nova,
+// a medio camino entre 36 y 72 -- lo que Pau reportó como "cosas raras" en
+// el scoring de ese campo). `mixed` sirve para escalar cada visita a un
+// equivalente de 18 hoyos (misma aproximación de rate-por-hoyo*18 ya usada
+// en scoreDifferentialForRound y en el toggle "Evolución por visita") SOLO
+// cuando de verdad hace falta -- así ningún otro campo (todos de longitud
+// constante) cambia ni una cifra respecto a como se veían antes.
+function courseVisitHoleCounts(courseHoles){
+  const counts = {};
+  courseHoles.forEach(h => { counts[h.r] = (counts[h.r]||0) + 1; });
+  const mixed = new Set(Object.values(counts)).size > 1;
+  return {counts, mixed};
+}
+// Copia de stats.sgByIdx escalada a equivalente de 18 hoyos por visita
+// cuando el campo mezcla longitudes (si no, devuelve sgByIdx tal cual, sin
+// tocar nada) -- reutilizada por el resumen de campos, las barras de SG y
+// el cálculo de "problema principal", para que las tres usen la misma
+// cifra por categoría en vez de cada una recalcular a su manera.
+function courseSgByIdxNormalized(stats){
+  const {counts, mixed} = courseVisitHoleCounts(stats.courseHoles);
+  if (!mixed) return stats.sgByIdx;
+  const out = {};
+  Object.keys(stats.sgByIdx).forEach(idx => {
+    const n = counts[idx];
+    const f = (n && n !== 18) ? 18/n : 1;
+    const sg = stats.sgByIdx[idx];
+    out[idx] = {tee: sg.tee*f, app: sg.app*f, stgame: sg.stgame*f, putt: sg.putt*f, tot: sg.tot*f};
+  });
+  return out;
+}
 // Course-level echo of mainIssuesForRound: mean SG per category ACROSS
 // VISITS to this course (not a single round), same <= -2 SG threshold Pau
 // set for the round-level version.
 function mainIssuesForCourse(stats){
   if (!stats.visitingRounds.length) return [];
+  const sgByIdx = courseSgByIdxNormalized(stats);
   const cat = {tee:0, app:0, stgame:0, putt:0};
   stats.visitingRounds.forEach(r => {
-    const sg = stats.sgByIdx[r.idx];
+    const sg = sgByIdx[r.idx];
     cat.tee += sg.tee; cat.app += sg.app; cat.stgame += sg.stgame; cat.putt += sg.putt;
   });
   const n = stats.visitingRounds.length;
   Object.keys(cat).forEach(k => cat[k] /= n);
   return Object.keys(cat).filter(k => cat[k] <= -2).map(k => SG_SERIES_LABEL_BY_KEY[k]);
+}
+
+// "Nivel jugado" a nivel de campo: mismo diferencial de puntuación oficial
+// (WHS, ver scoreDifferentialForRound) que el KPI de la portada, pero
+// promediado solo sobre las visitas a ESTE campo -- un "¿qué tal juego
+// normalmente aquí?" histórico. A diferencia de par/gross/stableford más
+// abajo, no necesita ningún ajuste especial para campos con visitas de 9 y
+// 18 mezcladas: scoreDifferentialForRound ya normaliza cada ronda a su
+// equivalente de 18 hoyos (la misma aproximación de doblado, aplicada por
+// ronda) antes de que lleguemos aquí a promediar.
+function courseNivelJugado(stats){
+  const diffs = stats.visitingRounds
+    .map(r => scoreDifferentialForRound(r, r.idx))
+    .filter(d => d !== null);
+  return diffs.length ? Math.round(mean(diffs) * 100) / 100 : null;
 }
 
 function computeCoursesSummary(rounds, holes, shots){
@@ -6554,24 +6663,35 @@ function computeCoursesSummary(rounds, holes, shots){
     // Par/Gross/Net/Stableford: summed per VISIT (round x course) from
     // hole-level fields, then averaged across visits -- this isolates each
     // course's own contribution even within a combo round, rather than
-    // using the round's official (whole-round) totals.
+    // using the round's official (whole-round) totals. Escalado a
+    // equivalente de 18 hoyos por visita cuando el campo mezcla longitudes
+    // (ver courseVisitHoleCounts) -- no-op para cualquier otro campo.
+    const {counts, mixed} = courseVisitHoleCounts(stats.courseHoles);
     const visits = {};
     stats.courseHoles.forEach(h => {
       const v = visits[h.r] = visits[h.r] || {par:0, gross:0, net:0, stb:0};
       v.par += h.p; v.gross += h.g; v.net += h.ns; v.stb += h.stb;
     });
-    const visitArr = Object.values(visits);
-    const parAvg = mean(visitArr.map(v=>v.par));
-    const grossAvg = mean(visitArr.map(v=>v.gross));
-    const netAvg = mean(visitArr.map(v=>v.net));
-    const stbAvg = mean(visitArr.map(v=>v.stb));
-    const sgTotalAvg = mean(stats.visitingRounds.map(r => stats.sgByIdx[r.idx].tot));
+    const rawVisitEntries = Object.entries(visits);
+    const scaledVisits = rawVisitEntries.map(([idx, v]) => {
+      if (!mixed) return v;
+      const n = counts[idx];
+      const f = (n && n !== 18) ? 18/n : 1;
+      return {par: v.par*f, gross: v.gross*f, net: v.net*f, stb: v.stb*f};
+    });
+    const parAvg = mean(scaledVisits.map(v=>v.par));
+    const grossAvg = mean(scaledVisits.map(v=>v.gross));
+    const netAvg = mean(scaledVisits.map(v=>v.net));
+    const stbAvg = mean(scaledVisits.map(v=>v.stb));
+    const sgByIdx = courseSgByIdxNormalized(stats);
+    const sgTotalAvg = mean(stats.visitingRounds.map(r => sgByIdx[r.idx].tot));
     const girPct = stats.courseHoles.length ? mean(stats.courseHoles.map(h=>h.gir))*100 : null;
     const issues = mainIssuesForCourse(stats);
+    const nivelJugado = courseNivelJugado(stats);
     return {
-      rc, label: REAL_COURSE_LABEL[rc]||rc, n: visitArr.length,
+      rc, label: REAL_COURSE_LABEL[rc]||rc, n: rawVisitEntries.length,
       par: Math.round(parAvg), grossToPar: grossAvg-parAvg, netToPar: netAvg-parAvg,
-      stbAvg, sgTotalAvg, girPct, issues, stats,
+      stbAvg, sgTotalAvg, girPct, issues, nivelJugado, mixedHoleCounts: mixed, stats,
     };
   });
 }
@@ -6616,22 +6736,43 @@ function setCourseHoleWindowNote(elId, visitingRounds, effVisitRounds, windowSta
 // only actually changes the picture for courses with mixed hole counts.
 let courseEvoNormalized = false;
 
+// Un accessor por columna del <thead> de #coursesTable, mismo orden que el
+// <thead> en el HTML (Campo, N, Par, Gross, Net, Stableford, SG Total,
+// GIR %, Nivel jugado, Problema principal) -- tabla única (sin split
+// header/body como Rondas), así que setupSortableTable no necesita
+// headTableId aquí.
+const COURSES_LIST_SORT_COLUMNS = [
+  {key:'label', accessor:c=>c.label, numeric:false, initialDir:'asc'},
+  {key:'n', accessor:c=>c.n, numeric:true, initialDir:'desc'},
+  {key:'par', accessor:c=>c.par, numeric:true, initialDir:'desc'},
+  {key:'gross', accessor:c=>c.grossToPar, numeric:true, initialDir:'asc'},
+  {key:'net', accessor:c=>c.netToPar, numeric:true, initialDir:'asc'},
+  {key:'stb', accessor:c=>c.stbAvg, numeric:true, initialDir:'desc'},
+  {key:'sg', accessor:c=>c.sgTotalAvg, numeric:true, initialDir:'desc'},
+  {key:'gir', accessor:c=>c.girPct, numeric:true, initialDir:'desc'},
+  {key:'nivel', accessor:c=>c.nivelJugado, numeric:true, initialDir:'asc'},
+  {key:'issues', accessor:c=>c.issues.join(', '), numeric:false, initialDir:'asc'},
+];
+
 function renderCoursesListTable(courses){
   const tbody = document.getElementById('coursesListBody');
   tbody.innerHTML = '';
   if (!courses.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="9">No hay campos en esta selección.</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="10">No hay campos en esta selección.</td></tr>';
     return;
   }
-  courses.forEach(c => {
+  const rows = sortRows('coursesListBody', courses, COURSES_LIST_SORT_COLUMNS);
+  rows.forEach(c => {
     const tr = document.createElement('tr');
     tr.className = 'round-row' + (c.rc===selectedCourse ? ' selected' : '');
     tr.tabIndex = 0;
     const issuesTxt = c.issues.length ? c.issues.join(', ') : '—';
-    tr.innerHTML = `<td>${c.label}</td><td class="num">${c.n}</td><td class="num">${c.par}</td>
+    const mixMark = c.mixedHoleCounts ? ' <span class="win-note" style="text-transform:none;letter-spacing:normal" title="Este campo mezcla visitas de 9 y 18 hoyos -- Par/Gross/Net/Stableford/SG Total están normalizados a equivalente de 18 hoyos para que sean comparables entre visitas.">(norm. 18h)</span>' : '';
+    tr.innerHTML = `<td>${c.label}${mixMark}</td><td class="num">${c.n}</td><td class="num">${c.par}</td>
       <td class="num">${fmtToPar(c.grossToPar)}</td><td class="num">${fmtToPar(c.netToPar)}</td><td class="num">${c.stbAvg.toFixed(1)}</td>
       <td class="num" style="color:${c.sgTotalAvg>=0?'var(--good)':'var(--critical)'}">${fmtSigned(c.sgTotalAvg,2)}</td>
       <td class="num">${c.girPct===null?'—':Math.round(c.girPct)+'%'}</td>
+      <td class="num">${c.nivelJugado===null?'—':c.nivelJugado.toFixed(1)}</td>
       <td>${issuesTxt}</td>`;
     const select = () => { selectedCourse = c.rc; render(); };
     tr.addEventListener('click', select);
@@ -6642,15 +6783,23 @@ function renderCoursesListTable(courses){
 
 function renderCourseDetailHeader(c){
   const el = document.getElementById('courseDetailHead');
-  el.textContent = `${c.label} · ${c.n} visita${c.n===1?'':'s'} · Par ${c.par} · Gross ${fmtToPar(c.grossToPar)} · Net ${fmtToPar(c.netToPar)} · Stableford ${c.stbAvg.toFixed(1)} · SG Total ${fmtSigned(c.sgTotalAvg,2)}`;
+  const nivelTxt = c.nivelJugado===null ? '—' : c.nivelJugado.toFixed(1);
+  el.textContent = `${c.label} · ${c.n} visita${c.n===1?'':'s'} · Par ${c.par} · Gross ${fmtToPar(c.grossToPar)} · Net ${fmtToPar(c.netToPar)} · Stableford ${c.stbAvg.toFixed(1)} · SG Total ${fmtSigned(c.sgTotalAvg,2)} · Nivel jugado ${nivelTxt}`;
+  const noteEl = document.getElementById('courseDetailNormNote');
+  if (noteEl) {
+    noteEl.textContent = c.mixedHoleCounts
+      ? 'Este campo mezcla visitas de 9 y 18 hoyos -- Par/Gross/Net/Stableford/SG Total de arriba están normalizados a equivalente de 18 hoyos (valor por hoyo × 18) para que todas las visitas cuenten en la misma escala. "Nivel jugado" no lo necesita: ya normaliza cada ronda individualmente con la fórmula oficial del WHS.'
+      : '';
+  }
 }
 
 function renderCourseSgBars(stats){
   const cat = {tee:0, app:0, stgame:0, putt:0};
   const n = stats.visitingRounds.length;
   if (n) {
+    const sgByIdx = courseSgByIdxNormalized(stats);
     stats.visitingRounds.forEach(r => {
-      const sg = stats.sgByIdx[r.idx];
+      const sg = sgByIdx[r.idx];
       cat.tee += sg.tee; cat.app += sg.app; cat.stgame += sg.stgame; cat.putt += sg.putt;
     });
     Object.keys(cat).forEach(k => cat[k] /= n);
@@ -7421,6 +7570,9 @@ setupSortableTable('appPerfBody', CLUB_PERF_SORT_COLUMNS, render);
 setupSortableTable('sgPerfBody', CLUB_PERF_SORT_COLUMNS, render);
 setupSortableTable('roundHoleBody', ROUND_HOLE_SORT_COLUMNS, render);
 setupSortableTable('courseHoleBody', COURSE_HOLE_SORT_COLUMNS, render);
+setupSortableTable('roundsListBody', ROUNDS_LIST_SORT_COLUMNS, render, 'roundsListHeadTable');
+setupSortableTable('coursesListBody', COURSES_LIST_SORT_COLUMNS, render);
+bindRoundsHeaderScrollSync();
 
 initColumnToggle('holesTable', 'holes-repeat-worst', HOLE16_COL_GROUPS);
 initColumnToggle('bestHolesTable', 'holes-repeat-best', HOLE16_COL_GROUPS);
