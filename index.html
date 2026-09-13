@@ -1709,7 +1709,7 @@
 
   <section>
     <div class="section-head">
-      <h2><span class="tip-trigger" tabindex="0"><span>Campos</span><span class="info-dot">i</span><span class="info-tooltip">Un campo por fila (los tres recorridos de La Sella cuentan como campos separados, igual que en el filtro de Campo de arriba). <b>Par</b>, <b>Gross</b>, <b>Net</b>, <b>Stableford</b> y <b>SG Total</b> son la media de esa parte del campo en cada visita (vs. par); si una ronda combina dos recorridos, cada uno cuenta solo su propia parte. Si un campo tiene visitas de 9 y 18 hoyos mezcladas (marcado con "norm. 18h" -- hoy en día, solo Oliva Nova), esos cinco se normalizan a un equivalente de 18 hoyos por visita antes de promediar, para que no salgan valores sin sentido a medio camino entre una vuelta de 9 y una de 18. <b>GIR %</b> está restringido a los hoyos de este campo dentro de cada visita (ya es un porcentaje por hoyo, no necesita normalizarse). <b>Nivel jugado</b> es el diferencial de puntuación oficial del WHS (el mismo que en la portada), promediado sobre las visitas a este campo. <b>Problema principal</b> = categorías de SG (Tee/Approach/Short Game/Putting) cuya media por visita es &le; -2 SG. Haz clic en una fila para ver su detalle debajo.</span></span></h2>
+      <h2><span class="tip-trigger" tabindex="0"><span>Campos</span><span class="info-dot">i</span><span class="info-tooltip">Un campo por fila (los tres recorridos de La Sella cuentan como campos separados, igual que en el filtro de Campo de arriba). <b>Par</b>, <b>Gross</b>, <b>Net</b>, <b>Stableford</b> y <b>SG Total</b> son la media de esa parte del campo en cada visita (vs. par); si una ronda combina dos recorridos, cada uno cuenta solo su propia parte. Si un campo tiene visitas de 9 y 18 hoyos mezcladas (marcado con "norm. 18h" -- hoy en día, solo Oliva Nova), esos cinco se normalizan a un equivalente de 18 hoyos por visita antes de promediar, para que no salgan valores sin sentido a medio camino entre una vuelta de 9 y una de 18. <b>GIR %</b> está restringido a los hoyos de este campo dentro de cada visita (ya es un porcentaje por hoyo, no necesita normalizarse). <b>Nivel jugado</b> es el diferencial de puntuación oficial del WHS de cada visita, calculado solo con los hoyos de este recorrido (aunque esa visita combinara dos recorridos de La Sella el mismo día) y su propio Valor de Campo/Slope individual, promediado sobre todas las visitas. <b>Problema principal</b> = categorías de SG (Tee/Approach/Short Game/Putting) cuya media por visita es &le; -2 SG. Haz clic en una fila para ver su detalle debajo.</span></span></h2>
     </div>
     <div class="card table-scroll">
       <table id="coursesTable">
@@ -1992,7 +1992,11 @@ function fmtArrowDelta(v, d=0){
   return (v < 0 ? '▼ ' : '▲ ') + Math.abs(v).toFixed(d);
 }
 // Score-to-par formatting: 0 -> "E" (even), otherwise a signed whole number.
-function fmtToPar(v){ if (v===null||v===undefined||Number.isNaN(v)) return '—'; if (v===0) return 'E'; return (v>0?'+':'')+Math.round(v); }
+// `d` (decimales, por defecto 0) permite reutilizar el mismo formato "+N"/"E"
+// típico de golf para promedios donde redondear a entero pierde precisión
+// real -- p.ej. Gross/Net en la lista de Campos, a petición de Pau, con el
+// mismo nivel de detalle que ya usan ahí Stableford y Nivel jugado.
+function fmtToPar(v, d=0){ if (v===null||v===undefined||Number.isNaN(v)) return '—'; if (v===0) return 'E'; const s = d===0 ? Math.round(v) : v.toFixed(d); return (v>0?'+':'')+s; }
 // Compact date for narrow columns (e.g. shot-row): "2025-07-28" -> "28/07/25".
 // Kept atomic on purpose -- unlike the ISO hyphen, "/" isn't a spot browsers
 // hyphenate/soft-break at, so it stays on one line and only the whitespace
@@ -6641,17 +6645,48 @@ function mainIssuesForCourse(stats){
   return Object.keys(cat).filter(k => cat[k] <= -2).map(k => SG_SERIES_LABEL_BY_KEY[k]);
 }
 
-// "Nivel jugado" a nivel de campo: mismo diferencial de puntuación oficial
-// (WHS, ver scoreDifferentialForRound) que el KPI de la portada, pero
-// promediado solo sobre las visitas a ESTE campo -- un "¿qué tal juego
-// normalmente aquí?" histórico. A diferencia de par/gross/stableford más
-// abajo, no necesita ningún ajuste especial para campos con visitas de 9 y
-// 18 mezcladas: scoreDifferentialForRound ya normaliza cada ronda a su
-// equivalente de 18 hoyos (la misma aproximación de doblado, aplicada por
-// ronda) antes de que lleguemos aquí a promediar.
+// Diferencial de puntuación de UNA VISITA a un recorrido concreto, aislado a
+// SUS PROPIOS hoyos -- incluso si esa visita fue parte de una ronda de 18
+// hoyos que combinaba dos recorridos de La Sella el mismo día. Antes,
+// courseNivelJugado usaba scoreDifferentialForRound(r, r.idx), que calcula
+// el diferencial de LA RONDA ENTERA (con el Valor de Campo/Slope de la
+// combinación, p.ej. Gregal+Mestral) y se lo atribuía tal cual a AMBOS
+// recorridos de esa visita -- así que el "Nivel jugado" de un recorrido que
+// nunca se juega solo (Mestral, en el histórico de Pau: sus 4 visitas son
+// todas combinadas) en realidad medía "cómo te fue ese día combinado", no
+// Mestral en sí, mientras que Par/Gross/Net/Stableford de esa misma tabla sí
+// aíslan correctamente cada recorrido a sus propios hoyos. Reportado por
+// Pau al notar que la proporción entre "Nivel jugado" y Stableford no
+// cuadraba entre Mestral y Llebeig.
+// Aquí se recalcula el Resultado Ajustado solo con los hoyos de `rc` en esa
+// ronda, y se compara contra el Valor de Campo/Slope INDIVIDUAL de ese
+// recorrido (mismos datos que ya usa scoreDifferentialForRound cuando el
+// recorrido se juega solo -- Vc/Slope de Mestral en solitario, que faltaban,
+// los dio Pau de la web de la Federación: ver COURSE_RATINGS), tratándolo
+// siempre como una vuelta de 9 que se dobla -- los tres recorridos de La
+// Sella son de 9 hoyos por naturaleza, se jueguen solos o combinados. Para
+// un campo de 18 hoyos que nunca se combina con otro (todos los demás), da
+// exactamente el mismo resultado que scoreDifferentialForRound daba antes.
+function courseLoopDifferential(rc, loopHoles){
+  const rating = COURSE_RATINGS[rc];
+  if (!rating) return null;
+  const ags = loopHoles.reduce((sum, h) => sum + Math.min(h.g, h.p + 2 + h.sr), 0);
+  const adjAgs = loopHoles.length === 9 ? 2 * ags : ags;
+  return Math.round((113 / rating.slope) * (adjAgs - rating.cr) * 10) / 10;
+}
+// "Nivel jugado" a nivel de campo: media de courseLoopDifferential sobre
+// cada visita a ESTE campo (agrupando stats.courseHoles -- ya filtrados a
+// `rc` -- por ronda), un "¿qué tal juego normalmente aquí?" histórico
+// aislado por recorrido. A diferencia de par/gross/stableford más abajo, no
+// necesita ningún ajuste especial para campos con visitas de 9 y 18
+// mezcladas: courseLoopDifferential ya normaliza cada visita a su
+// equivalente de 18 hoyos (la misma aproximación de doblado) antes de que
+// lleguemos aquí a promediar.
 function courseNivelJugado(stats){
-  const diffs = stats.visitingRounds
-    .map(r => scoreDifferentialForRound(r, r.idx))
+  const byVisit = {};
+  stats.courseHoles.forEach(h => { (byVisit[h.r] = byVisit[h.r] || []).push(h); });
+  const diffs = Object.values(byVisit)
+    .map(loopHoles => courseLoopDifferential(stats.rc, loopHoles))
     .filter(d => d !== null);
   return diffs.length ? Math.round(mean(diffs) * 100) / 100 : null;
 }
@@ -6769,7 +6804,7 @@ function renderCoursesListTable(courses){
     const issuesTxt = c.issues.length ? c.issues.join(', ') : '—';
     const mixMark = c.mixedHoleCounts ? ' <span class="win-note" style="text-transform:none;letter-spacing:normal" title="Este campo mezcla visitas de 9 y 18 hoyos -- Par/Gross/Net/Stableford/SG Total están normalizados a equivalente de 18 hoyos para que sean comparables entre visitas.">(norm. 18h)</span>' : '';
     tr.innerHTML = `<td>${c.label}${mixMark}</td><td class="num">${c.n}</td><td class="num">${c.par}</td>
-      <td class="num">${fmtToPar(c.grossToPar)}</td><td class="num">${fmtToPar(c.netToPar)}</td><td class="num">${c.stbAvg.toFixed(1)}</td>
+      <td class="num">${fmtToPar(c.grossToPar,1)}</td><td class="num">${fmtToPar(c.netToPar,1)}</td><td class="num">${c.stbAvg.toFixed(1)}</td>
       <td class="num" style="color:${c.sgTotalAvg>=0?'var(--good)':'var(--critical)'}">${fmtSigned(c.sgTotalAvg,2)}</td>
       <td class="num">${c.girPct===null?'—':Math.round(c.girPct)+'%'}</td>
       <td class="num">${c.nivelJugado===null?'—':c.nivelJugado.toFixed(1)}</td>
@@ -7252,6 +7287,13 @@ const COURSE_RATINGS = {
   'La Galiana Campo de Golf':        {cr: 71.8, slope: 146},
   'La Sella Gregal':                 {cr: 72.0, slope: 131},
   'La Sella Llebeig':                {cr: 73.4, slope: 140},
+  // Vc/Slope de Mestral en solitario (35.1/126, doblado a CR18=70.2), de la
+  // web de la Federación -- no venían en la hoja de Pau porque Mestral nunca
+  // se juega sola en su histórico (siempre combinada con Gregal o Llebeig).
+  // Necesaria para que courseLoopDifferential() pueda aislar el diferencial
+  // de cada visita a Mestral por su propio recorrido, en vez de heredar el
+  // de la ronda combinada entera (ver el comentario junto a esa función).
+  'La Sella Mestral':                {cr: 70.2, slope: 126},
   'Oliva Nova Golf Club':            {cr: 70.7, slope: 135},
   'Puig Campana Golf Course':        {cr: 70.6, slope: 121},
 };
