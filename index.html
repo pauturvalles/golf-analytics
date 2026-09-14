@@ -1514,6 +1514,46 @@
 
   <section>
     <div class="section-head">
+      <h2><span class="tip-trigger" tabindex="0"><span>Consistencia de palo</span><span class="info-dot">i</span><span class="info-tooltip">Capacidad de cada palo de producir golpes parecidos entre sí, en dos ejes por separado -- no es lo mismo "cuánto varía la distancia" que "cuánto varía la dirección", así que hay columnas para cada uno en vez de un único número.<br><br><b>Eje distancia (vertical):</b> <b>Desv. típica</b> = desviación estándar de <code>dist</code>, lo lejos que llegó CADA golpe (el mismo dato que el eje vertical de "Dispersión de golpes de salida" más abajo) -- no la distancia a bandera ni el resultado del golpe, solo lo que hizo el swing. <b>CV</b> (coeficiente de variación = desviación típica / media) compara consistencia ENTRE palos de longitudes distintas -- cuanto más bajo, más fiable el número de ese palo (antes había también un "% en banda &plusmn;10%"; se quitó por redundante con el CV -- los dos miden esencialmente lo mismo, y el CV es el más útil de los dos para comparar y ordenar palos entre sí, al ser continuo en vez de depender de un umbral fijo).<br><br><b>Eje lateral (izquierda/derecha):</b> <b>Sesgo lateral</b> = desviación lateral MEDIA (negativo = izquierda, positivo = derecha) -- si no es cercana a 0, hay una tendencia sistemática a caer a un lado, no solo dispersión. <b>Desv. lateral</b> = cuánto varía esa desviación golpe a golpe (la dispersión en sí). El campo usado depende de a qué apunta el golpe, con el mismo criterio que ya usan las gráficas de dispersión de más abajo: <code>fo</code> (respecto al centro de calle) en tee shots de par 4/5, <code>ho</code> (respecto a bandera) en el resto -- por eso no hay CV lateral, esa métrica solo tiene sentido cuando el valor "normal" es un número grande y positivo (una distancia), no un desvío que en el caso ideal ronda 0.<br><br>(Se probó también una columna de "% SG &le;-1.0" -- se retiró porque en esta población, que ya excluye penalización/drop/bola perdida y además filtra mishits, el catastrófico sale en 0% para casi todos los palos y no distinguía nada entre ellos; esa señal ya la cubre "Fiabilidad" en Rendimiento por palo, con su propia población.)<br><br><b>% golpes buenos / % golpes malos:</b> porcentaje de golpes de esta tabla (mismos filtros que el resto de columnas) con SG&ge;+0.3 (bueno) o SG&le;-0.3 (malo) -- un umbral menos restrictivo que el &plusmn;1.0 de "error grave", pensado para el día a día en vez de solo desastres. Se validó con la distribución real de SG de esta población (media +0.12, mediana +0.12, sd 0.37): &plusmn;0.3 da un reparto con recorrido real entre palos (ni 0% en todos como pasaba con -1.0, ni mayoría en todos). El resto de golpes (ni bueno ni malo) no se muestra aparte, así que las dos columnas no tienen por qué sumar 100%.<br><br><b>Selectores:</b> ventana de rondas, <b>lie</b> (Todos/Tee/Calle/Rough/Bunker, filtra por el lie REAL del golpe) y <b>temporada</b> (Todas/Invierno/Verano, abril-octubre = verano, mismo criterio que "Distancias por palo") -- los tres se combinan entre sí. Las filas siguen siendo una por palo (no palo &times; lie ni palo &times; temporada) para no fragmentar la muestra en filas casi vacías. El filtro de mishit sigue usando los mismos límites globales por palo (todo el historial, todos los lies y temporadas) al no haber muestra suficiente para un umbral propio de cada combinación.<br><br>N&lt;8 atenúa la fila, N entre 8-15 se marca como "Muestra pequeña". Filas ordenadas por defecto de palo más largo a más corto (Driver &rarr; Wedges) -- haz clic en cualquier cabecera para ordenar por esa columna.</span></span></h2>
+    </div>
+    <div class="card">
+      <div class="controls-row" style="margin-bottom:14px">
+        <div class="seg-control" id="clubConsistencyWindowControl">
+          <button class="seg-btn" data-window="recent3">Últimas 3</button>
+          <button class="seg-btn" data-window="recent5">Últimas 5</button>
+          <button class="seg-btn active" data-window="recent10">Últimas 10</button>
+          <button class="seg-btn" data-window="recent20">Últimas 20</button>
+          <button class="seg-btn" data-window="all">Selección completa</button>
+        </div>
+        <span class="win-note" id="clubConsistencyWindowNote"></span>
+      </div>
+      <div class="controls-row" style="margin-bottom:14px">
+        <div class="seg-control" id="clubConsistencyLieControl">
+          <button class="seg-btn active" data-lie="all">Todos los lies</button>
+          <button class="seg-btn" data-lie="Tee">Tee</button>
+          <button class="seg-btn" data-lie="Fairway">Calle</button>
+          <button class="seg-btn" data-lie="Rough">Rough</button>
+          <button class="seg-btn" data-lie="Bunker">Bunker</button>
+        </div>
+        <div class="seg-control" id="clubConsistencySeasonControl">
+          <button class="seg-btn active" data-season="all">Todas las temporadas</button>
+          <button class="seg-btn" data-season="winter">Invierno</button>
+          <button class="seg-btn" data-season="summer">Verano</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+      <table class="club-table">
+        <thead>
+          <tr><th>Palo</th><th class="num">N</th><th class="num">Dist. media</th><th class="num">Desv. típica</th><th class="num">CV</th><th class="num">Sesgo lateral</th><th class="num">Desv. lateral</th><th class="num">% buenos</th><th class="num">% malos</th></tr>
+        </thead>
+        <tbody id="clubConsistencyBody"></tbody>
+      </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
       <h2><span class="tip-trigger" tabindex="0"><span>Rendimiento por palo</span><span class="info-dot">i</span><span class="info-tooltip">Un palo cumple un papel distinto según la fase del juego, así que en vez de un único ranking global hay tres tablas — cada una con su propia definición de "fiabilidad" y "éxito" (ver el icono ⓘ junto a cada subtítulo), con SG/golpe + N como referencia común en las tres.<br><br><b>N</b> siempre se muestra; N entre 8 y 15 se marca como "Muestra pequeña", N&lt;8 atenúa la fila (no se oculta, pero no es una conclusión sólida). Las filas se ordenan por defecto de palo más largo a más corto (Driver &rarr; Wedges) — haz clic en cualquier cabecera de columna para ordenar.</span></span></h2>
     </div>
     <div class="card">
@@ -1538,7 +1578,7 @@
       </div>
 
       <div style="margin-bottom:32px">
-        <h4 style="margin:0 0 4px;font-size:14px">Dispersión de golpes de salida <span class="tip-trigger" tabindex="0"><span class="info-dot">i</span><span class="info-tooltip">Cada punto es un golpe de salida en par 4/5, colocado respecto al centro de la calle en el momento en que acaba: el eje vertical es la distancia recorrida por el golpe, el horizontal la desviación lateral respecto al centro de calle. Verde = ese golpe concreto encontró la calle (mismo dato que "Fairway hit %" en la tabla de arriba), rojo = no. Es una gráfica distinta a las de Approach/Short Game porque aquí el objetivo no es un punto (la bandera) sino una franja (la calle) -- no hay anillos de distancia a un centro, sino un plano con el centro de calle como referencia. El punto azul abajo en el centro marca la salida, no un objetivo a alcanzar. Datos de Shot Scope (GPS por golpe), misma ventana y selección que la tabla de arriba. Haz clic en una fila de la tabla para filtrar por palo (clic de nuevo para quitar el filtro). <b>Los dos ejes son siempre los mismos</b>, calculados sobre todos los palos de la ventana actual y no solo el filtrado -- así se puede comparar a simple vista tanto cómo se estrecha el cono de dispersión lateral con palos más cortos como su alcance real en distancia, en vez de que cada palo reescale su propio hueco para llenar el lienzo entero. No se excluye ningún golpe aquí: a diferencia de Approach/Short Game, un tee shot en par 4/5 siempre es un intento real de coger calle, no hay equivalente a un golpe de posición o un mishit que desvirtúe la medida.</span></span></h4>
+        <h4 style="margin:0 0 4px;font-size:14px">Dispersión de golpes de salida <span class="tip-trigger" tabindex="0"><span class="info-dot">i</span><span class="info-tooltip">Cada punto es un golpe de salida en par 4/5, colocado respecto al centro de la calle en el momento en que acaba: el eje vertical es la distancia recorrida por el golpe, el horizontal la desviación lateral respecto al centro de calle. Verde = ese golpe concreto encontró la calle (mismo dato que "Fairway hit %" en la tabla de arriba), rojo = no. Es una gráfica distinta a las de Approach/Short Game porque aquí el objetivo no es un punto (la bandera) sino una franja (la calle) -- no hay anillos de distancia a un centro, sino un plano con el centro de calle como referencia. El punto azul abajo en el centro marca la salida, no un objetivo a alcanzar. Datos de Shot Scope (GPS por golpe), misma ventana y selección que la tabla de arriba. Haz clic en una fila de la tabla para filtrar por palo (clic de nuevo para quitar el filtro). <b>Los dos ejes son siempre los mismos</b>, calculados sobre todos los palos de la ventana actual y no solo el filtrado -- así se puede comparar a simple vista tanto cómo se estrecha el cono de dispersión lateral con palos más cortos como su alcance real en distancia, en vez de que cada palo reescale su propio hueco para llenar el lienzo entero. No se excluye ningún golpe aquí: a diferencia de Approach/Short Game, un tee shot en par 4/5 siempre es un intento real de coger calle, no hay equivalente a un golpe de posición o un mishit que desvirtúe la medida.<br><br><b>Zonas de color (elipses):</b> por cada palo con al menos 2 golpes en esta ventana (con 1 solo golpe no hay dispersión que medir, esos palos se listan bajo el gráfico sin elipse), una elipse de un color propio marca la zona donde cae aproximadamente el <b>50% de sus golpes</b> (no todos -- es el núcleo denso de la distribución, calculado con media y covarianza de distancia+desviación lateral, no un rango de seguridad ni un peor caso). Con menos de 8 golpes la elipse se dibuja igualmente (a petición de Pau, para poder comparar TODOS los palos de la bolsa aunque alguno tenga poca muestra) pero con trazo discontinuo y más tenue -- la forma es real pero menos fiable con tan pocos datos. Los colores son fijos por palo, no cambian con la ventana ni el filtro. Al aislar un palo (fila de la tabla o su color en la leyenda) su elipse se resalta y el resto se atenúa en el GRÁFICO -- pero la leyenda en sí siempre se queda visible con todos los colores a plena opacidad, nunca desaparece ni se queda "solo verde/rojo": el palo aislado simplemente se marca en negrita.</span></span></h4>
         <span class="win-note" id="teeDispersionNote"></span>
         <div class="chart-wrap dispersion-wrap" id="teeDispersionChartWrap">
           <svg id="teeDispersionChart" viewBox="0 0 700 700" width="100%" style="overflow:visible;display:block"></svg>
@@ -1558,7 +1598,7 @@
       </div>
 
       <div style="margin-bottom:32px">
-        <h4 style="margin:0 0 4px;font-size:14px">Dispersión de golpes de approach <span class="tip-trigger" tabindex="0"><span class="info-dot">i</span><span class="info-tooltip">Cada punto es un golpe de approach, colocado donde acabó respecto a la bandera (centro): los anillos son distancia a bandera en metros, arriba = te pasas de largo, abajo = te quedas corto, izquierda/derecha = desviación lateral. Verde = ese golpe acabó en el green, rojo = no. Datos de Shot Scope (desglose del golpe por GPS), misma ventana y selección que la tabla de arriba. Haz clic en una fila de la tabla para filtrar por palo (clic de nuevo para quitar el filtro).<br><br><b>Golpes excluidos de esta gráfica (aunque cuenten como approach a efectos de SG):</b> (1) los que Shot Scope marca como posicionales/drop por penalización/bola perdida; (2) los que, sin estar marcados, salen desde una distancia de partida que supera en más de un 30% la distancia máxima que ese palo ha alcanzado alguna vez (todo el historial) -- un layup, no un intento real de llegar al green; (3) los que recorren una distancia (el propio golpe, no la distancia a bandera) inferior al p15 histórico del palo menos un 10% de margen -- un palo razonable para la distancia, pero un golpe que se quedó muy corto de lo esperable (rama de árbol, golpe fino/gordo...), así que tampoco mide precisión atacando green. Ninguna de las tres reglas es infalible: un golpe con club claramente insuficiente pero sin marcar y con distancia de partida solo un poco por encima del máximo histórico del palo puede colarse (ejemplo real conocido: una madera 4 desde 212m con máximo histórico 215m). El aviso bajo el título indica cuántos golpes se han excluido en la vista actual.</span></span></h4>
+        <h4 style="margin:0 0 4px;font-size:14px">Dispersión de golpes de approach <span class="tip-trigger" tabindex="0"><span class="info-dot">i</span><span class="info-tooltip">Cada punto es un golpe de approach, colocado donde acabó respecto a la bandera (centro): los anillos son distancia a bandera en metros, arriba = te pasas de largo, abajo = te quedas corto, izquierda/derecha = desviación lateral. Verde = ese golpe acabó en el green, rojo = no. Datos de Shot Scope (desglose del golpe por GPS), misma ventana y selección que la tabla de arriba. Haz clic en una fila de la tabla para filtrar por palo (clic de nuevo para quitar el filtro).<br><br><b>Golpes excluidos de esta gráfica (aunque cuenten como approach a efectos de SG):</b> (1) los que Shot Scope marca como posicionales/drop por penalización/bola perdida; (2) los que, sin estar marcados, salen desde una distancia de partida que supera en más de un 30% la distancia máxima que ese palo ha alcanzado alguna vez (todo el historial) -- un layup, no un intento real de llegar al green; (3) los que recorren una distancia (el propio golpe, no la distancia a bandera) inferior al p15 histórico del palo menos un 10% de margen -- un palo razonable para la distancia, pero un golpe que se quedó muy corto de lo esperable (rama de árbol, golpe fino/gordo...), así que tampoco mide precisión atacando green. Ninguna de las tres reglas es infalible: un golpe con club claramente insuficiente pero sin marcar y con distancia de partida solo un poco por encima del máximo histórico del palo puede colarse (ejemplo real conocido: una madera 4 desde 212m con máximo histórico 215m). El aviso bajo el título indica cuántos golpes se han excluido en la vista actual.<br><br><b>Cuarta exclusión, solo de esta gráfica (a diferencia de las tres anteriores, estos SÍ son golpes de approach reales y representativos -- no se excluyen de ninguna otra tabla ni del SG, solo de este dibujo):</b> golpes a más de 80m de bandera. Con un solo golpe muy alejado (p.ej. un 22&deg; Hybrid a 131m tras un tee shot muy corto) los anillos tenían que agrandarse tanto para caber que el resto -- la inmensa mayoría, mucho más cerca de bandera -- quedaba apelotonado en un punto casi ilegible en el centro. Se prefirió recortar la escala a 80m y avisar cuántos golpes quedan fuera, antes que sacrificar la legibilidad del grueso de los datos por un puñado de casos extremos.</span></span></h4>
         <span class="win-note" id="appDispersionNote"></span>
         <div class="chart-wrap dispersion-wrap" id="appDispersionChartWrap">
           <svg id="appDispersionChart" viewBox="0 0 700 700" width="100%" style="overflow:visible;display:block"></svg>
@@ -4700,6 +4740,21 @@ function clubOrderIndex(club){
   const i = CLUB_ORDER.indexOf(club);
   return i === -1 ? 999 : i;
 }
+// Paleta fija por palo para "Dispersión de golpes de salida" (elipses de
+// zona esperada, sept. 2026, petición de Pau). Asignación ESTABLE por
+// índice en CLUB_ORDER (no se recalcula según qué palos aparecen en la
+// ventana actual) -- 12 tonos elegidos a mano evitando las dos bandas ya
+// usadas con significado propio en el dashboard (verde ~120° = "Calle" en
+// esta misma gráfica, rojo ~0° = "Fuera de calle"/`--critical`), con buena
+// separación entre los que más probablemente coincidan a la vez (los
+// palos que realmente salen como tee shot: Driver, maderas, híbrido y
+// algún hierro largo -- los wedges casi nunca aparecen aquí, así que a
+// partir del índice 12 la paleta simplemente rota sin que importe mucho).
+const CLUB_COLORS = ['#2E6FD9','#D89A2E','#9A4DC7','#2FA8C6','#D45285','#C7A62E','#6455C9','#9C6B3E','#3FA0A0','#C246A0','#4F9FE0','#8E7CD9'];
+function clubColor(club){
+  const i = clubOrderIndex(club);
+  return CLUB_COLORS[(i===999 ? 0 : i) % CLUB_COLORS.length];
+}
 // Reliability already IS the complement of what used to be a separate
 // "Error rate" column (100 - Reliability, same sg<=-1.0 threshold) -- Pau
 // asked to drop the redundant column and keep only Reliability. errRate is
@@ -4753,6 +4808,177 @@ function renderClubPerfSection(rounds, holes, shots){
   renderShortGameDispersion(rounds, holes, shots);
 }
 bindWindowControl('clubPerfWindowControl', v => { clubPerfWindow = v; });
+
+// ============================================================
+// "Consistencia de palo" -- capacidad de producir golpes de distancia
+// similar con el mismo palo desde lies similares (Pau, sept. 2026): dos
+// ejes por separado, no uno solo --
+//   - EJE VERTICAL/distancia: cuánto varía lo lejos que llega el golpe
+//     (`dist`, igual que el eje vertical de "Dispersión de golpes de
+//     salida" de más abajo) -- SG/dispersión-a-bandera no sirven aquí
+//     porque mezclan precisión de distancia con acierto de palo/lectura de
+//     yardaje; `dist` mide solo lo que hizo el swing.
+//   - EJE LATERAL: cuánto se desvía a izquierda/derecha. Para un tee shot
+//     de par 4/5 eso es `fo` (fairway_offset, respecto al centro de
+//     calle -- el mismo campo que usa la gráfica de dispersión de Tee). Un
+//     golpe que apunta a bandera (tee de par 3, approach, short game) usa
+//     en cambio `ho` (horizontal_offset respecto a la propia bandera,
+//     igual que las gráficas de dispersión de Approach/Short Game). Se usa
+//     classifyShot() -- la misma función que ya decide Tee/Approach/Short
+//     Game en toda la pestaña -- para elegir el campo correcto golpe a
+//     golpe, en vez de mirar el lie a secas (un tee shot de par 3 tiene
+//     lie='Tee' pero apunta a bandera, no a una calle).
+//
+// Reutiliza la misma población base que "Distancias por palo" (solo bolsa
+// activa, suelo de 30m de swing completo, se excluyen golpes marcados como
+// posicional/drop por penalización/bola perdida) más el mismo filtro de
+// mishit que ya usa la dispersión de Approach (CLUB_MISHIT_MARGIN sobre
+// computeClubDistanceBounds, todo el historial, sin filtrar por lie -- no
+// hay suficiente muestra por lie para calcular un p15 propio de cada uno).
+// A diferencia de "Distancias por palo" (que no se puede filtrar por
+// ronda, solo por temporada), aquí Pau pidió el mismo selector de ventana
+// de rondas que el resto de tablas de Palos, con el añadido de "últimas
+// 20" (ya soportado por WINDOW_SIZES pero sin botón en ninguna tabla).
+//
+// Capa de lie (pedida por Pau en la ronda siguiente a la primera versión,
+// que mezclaba todos los lies): selector Todos/Tee/Calle/Rough/Bunker que
+// filtra por el lie REAL del golpe (`s.lie`) -- las filas siguen siendo
+// una por palo (no palo x lie, para no fragmentar la muestra en decenas de
+// filas casi vacías) y el filtro simplemente restringe qué golpes entran
+// en el cálculo de cada palo.
+//
+// Capa de temporada (misma ronda que la de lie): Pau quería comprobar su
+// hipótesis de que invierno/verano cambia la distancia media pero no las
+// desviaciones -- reutiliza seasonOfDate() tal cual, ya definida para
+// "Distancias por palo". A diferencia del toggle Invierno/Verano de esa
+// sección (binario, sin "todas"), aquí el valor por defecto es 'all' para
+// no cambiar el comportamiento ya existente -- mismo patrón que el
+// selector de lie, que también empieza en "Todos".
+let clubConsistencyWindow = 'recent10'; // 'recent3' | 'recent5' | 'recent10' | 'recent20' | 'all'
+let clubConsistencyLie = 'all'; // 'all' | 'Tee' | 'Fairway' | 'Rough' | 'Bunker'
+let clubConsistencySeason = 'all'; // 'all' | 'summer' | 'winter'
+// Columna "% SG<=-1.0" probada y retirada (sept. 2026): en la población de
+// esta tabla (solo golpes de swing completo limpio -- ya excluye
+// penalización/drop/bola perdida, y además filtra mishits) el catastrófico
+// sale en 0% para casi todos los palos, incluso sin el filtro de mishit
+// (0-2.9% de la población de swing completo, ya que lo que suele producir
+// SG<=-1.0 en un solo golpe son justo los casos que esta tabla excluye por
+// diseño) -- la columna no distinguía nada entre palos, así que se quitó a
+// petición de Pau en vez de mezclar poblaciones incluyendo mishits. Esa
+// señal ya la cubre "Rendimiento por palo" con su propia población.
+//
+// En su lugar, Pau preguntó si tendría sentido un umbral menos restrictivo
+// para calificar golpes buenos/malos. Se comprobó la distribución real de
+// SG en esta misma población (todos los palos, todas las ventanas): media
+// +0.12, mediana +0.12, sd 0.37 (algo positiva porque ya se han quitado
+// mishits y errores graves). +-0.3 fue el umbral que dio un reparto con
+// recorrido real por palo (pooled: 13.7% malos / 32.9% buenos, ni degenerado
+// a 0% como -1.0 ni a mayorías) -- confirmado con Pau, quien dio el visto
+// bueno explícito a +-0.3 para ambos lados.
+const CLUB_CONSISTENCY_GOOD_SG = 0.3;
+const CLUB_CONSISTENCY_BAD_SG = -0.3;
+function computeClubConsistency(rounds, holes, shots, windowState, lieFilter, seasonFilter){
+  const effRounds = windowRounds(rounds, windowState);
+  const idxSet = new Set(effRounds.map(r=>r.idx));
+  const effHoles = holes.filter(h => idxSet.has(h.r));
+  const effShots = shots.filter(s => idxSet.has(s.r));
+  const parMap = {}; effHoles.forEach(h => parMap[h.r+'|'+h.h] = h.p);
+  const startMap = computeStartDistMap(effShots);
+  const dateByIdx = {}; DATA.rounds.forEach((r,i) => { dateByIdx[i]=r.d; });
+  const bounds = computeClubDistanceBounds();
+  const byClub = {};
+  ACTIVE_BAG_CLUBS.forEach(c => byClub[c] = {dists: [], laterals: [], goodCount: 0, badCount: 0, sgCount: 0});
+  effShots.forEach(s => {
+    if (s.et !== 'shot') return;
+    if (s.flag==='positional' || s.flag==='penalty_drop' || s.flag==='lost_ball') return;
+    if (!byClub[s.cl]) return; // putter, o palo retirado (no está en la bolsa activa)
+    if (lieFilter !== 'all' && s.lie !== lieFilter) return;
+    if (seasonFilter !== 'all') {
+      const d = dateByIdx[s.r];
+      if (!d || seasonOfDate(d) !== seasonFilter) return;
+    }
+    if (s.dist===null || s.dist===undefined || s.dist < CLUB_DIST_FULLSWING_FLOOR_M) return;
+    const b = bounds[s.cl];
+    if (b && s.dist < b.p15*(1-CLUB_MISHIT_MARGIN)) return; // mishit: no mide consistencia de swing
+    byClub[s.cl].dists.push(s.dist);
+    if (s.sg !== null && s.sg !== undefined) {
+      byClub[s.cl].sgCount++;
+      if (s.sg >= CLUB_CONSISTENCY_GOOD_SG) byClub[s.cl].goodCount++;
+      else if (s.sg <= CLUB_CONSISTENCY_BAD_SG) byClub[s.cl].badCount++;
+    }
+    const par = parMap[s.r+'|'+s.h];
+    const category = par!==undefined ? classifyShot(s, par, startMap) : null;
+    const lateral = category==='tee' ? s.fo : (category==='app' || category==='stgame') ? s.ho : null;
+    if (lateral !== null && lateral !== undefined) byClub[s.cl].laterals.push(lateral);
+  });
+  return ACTIVE_BAG_CLUBS.map(club => {
+    const {dists, laterals, goodCount, badCount, sgCount} = byClub[club];
+    const n = dists.length;
+    if (!n) return {club, n: 0, meanDist: null, sd: null, cv: null, latBias: null, latSd: null, goodRate: null, badRate: null};
+    const m = mean(dists);
+    const sd = n>=2 ? Math.sqrt(variance(dists, m)) : null;
+    const cv = (sd!==null && m) ? sd/m*100 : null;
+    const latN = laterals.length;
+    const latBias = latN ? mean(laterals) : null;
+    const latSd = latN>=2 ? Math.sqrt(variance(laterals, latBias)) : null;
+    const goodRate = sgCount ? goodCount/sgCount*100 : null;
+    const badRate = sgCount ? badCount/sgCount*100 : null;
+    return {club, n, meanDist: m, sd, cv, latBias, latSd, goodRate, badRate};
+  });
+}
+const CLUB_CONSISTENCY_SORT_COLUMNS = [
+  {key:'club', accessor:r=>clubOrderIndex(r.club), numeric:true, initialDir:'asc'},
+  {key:'n', accessor:r=>r.n, numeric:true, initialDir:'desc'},
+  {key:'meanDist', accessor:r=>r.meanDist, numeric:true, initialDir:'desc'},
+  {key:'sd', accessor:r=>r.sd, numeric:true, initialDir:'asc'},
+  {key:'cv', accessor:r=>r.cv, numeric:true, initialDir:'asc'},
+  {key:'latBias', accessor:r=>r.latBias, numeric:true, initialDir:'asc'},
+  {key:'latSd', accessor:r=>r.latSd, numeric:true, initialDir:'asc'},
+  {key:'goodRate', accessor:r=>r.goodRate, numeric:true, initialDir:'desc'},
+  {key:'badRate', accessor:r=>r.badRate, numeric:true, initialDir:'asc'},
+];
+function renderClubConsistencyTable(rows){
+  const tbody = document.getElementById('clubConsistencyBody');
+  tbody.innerHTML = '';
+  const visible = rows.filter(r => r.n > 0);
+  if (!visible.length) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="9">No hay golpes de swing completo en esta selección.</td></tr>`;
+    return;
+  }
+  const sorted = sortRows('clubConsistencyBody', visible, CLUB_CONSISTENCY_SORT_COLUMNS);
+  sorted.forEach(r => {
+    const tr = document.createElement('tr');
+    if (r.n < 8) tr.style.opacity = '0.55';
+    tr.innerHTML = `
+      <td>${r.club}</td>
+      <td class="num">${r.n}${clubPerfSampleBadge(r.n)}</td>
+      <td class="num">${r.meanDist===null?'—':fmtPlain(r.meanDist,0)+'m'}</td>
+      <td class="num">${r.sd===null?'—':'±'+fmtPlain(r.sd,1)+'m'}</td>
+      <td class="num">${r.cv===null?'—':fmtPlain(r.cv,1)+'%'}</td>
+      <td class="num">${r.latBias===null?'—':fmtSigned(r.latBias,1)+'m'}</td>
+      <td class="num">${r.latSd===null?'—':'±'+fmtPlain(r.latSd,1)+'m'}</td>
+      <td class="num">${r.goodRate===null?'—':Math.round(r.goodRate)+'%'}</td>
+      <td class="num">${r.badRate===null?'—':Math.round(r.badRate)+'%'}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+function renderClubConsistencySection(rounds, holes, shots){
+  syncWindowControl('clubConsistencyWindowControl', clubConsistencyWindow);
+  const effRounds = windowRounds(rounds, clubConsistencyWindow);
+  setWindowNote('clubConsistencyWindowNote', rounds, effRounds, clubConsistencyWindow);
+  document.querySelectorAll('#clubConsistencyLieControl .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.lie === clubConsistencyLie));
+  document.querySelectorAll('#clubConsistencySeasonControl .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.season === clubConsistencySeason));
+  const rows = computeClubConsistency(rounds, holes, shots, clubConsistencyWindow, clubConsistencyLie, clubConsistencySeason);
+  renderClubConsistencyTable(rows);
+}
+bindWindowControl('clubConsistencyWindowControl', v => { clubConsistencyWindow = v; });
+document.getElementById('clubConsistencyLieControl').querySelectorAll('.seg-btn').forEach(btn => {
+  btn.addEventListener('click', () => { clubConsistencyLie = btn.dataset.lie; render(); });
+});
+document.getElementById('clubConsistencySeasonControl').querySelectorAll('.seg-btn').forEach(btn => {
+  btn.addEventListener('click', () => { clubConsistencySeason = btn.dataset.season; render(); });
+});
+sortState['clubConsistencyBody'] = {key:'club', dir:'asc'};
 
 // ============================================================
 // APP_DISPERSION: "dispersión de golpes de approach" -- un punto por golpe
@@ -4992,6 +5218,17 @@ function drawDispersionRings(opts){
     legend.appendChild(item);
   });
 }
+// Límite de escala SOLO de esta gráfica (no toca SG/"Rendimiento por
+// palo"/ninguna otra tabla, que siguen contando estos golpes tal cual):
+// Pau detectó que un golpe suelto muy lejos de bandera (22° Hybrid,
+// 26/08/2026, 131m -- y hay más de un caso similar, hasta 137m) obligaba
+// a unos anillos tan grandes que el resto de golpes (la inmensa mayoría,
+// mucho más cerca) se apelotonaban en un punto casi ilegible en el
+// centro. En vez de excluirlos de golpe sin avisar, se tratan igual que
+// las otras 3 señales de exclusión ya existentes (posicional/layup/
+// mishit): no se dibujan, pero se cuentan y se avisa cuántos fueron bajo
+// el título.
+const APPROACH_DISPERSION_MAX_DIST_M = 80;
 function renderApproachDispersion(rounds, holes, shots){
   const svg = document.getElementById('appDispersionChart'), legend = document.getElementById('appDispersionLegend'),
         tooltip = document.getElementById('appDispersionTooltip'), wrap = document.getElementById('appDispersionChartWrap'),
@@ -4999,13 +5236,17 @@ function renderApproachDispersion(rounds, holes, shots){
   let {points, excludedByClub} = computeApproachDispersionPoints(rounds, holes, shots);
   const excludedTotal = Object.values(excludedByClub).reduce((a,b)=>a+b, 0);
   if (appDispersionClub) points = points.filter(p => p.club === appDispersionClub);
+  const beforeScaleCap = points.length;
+  points = points.filter(p => Math.sqrt(p.vo*p.vo + p.ho*p.ho) <= APPROACH_DISPERSION_MAX_DIST_M);
+  const excludedByScale = beforeScaleCap - points.length;
   drawDispersionRings({svg, legend, tooltip, wrap, points, goodLabel:'En green', badLabel:'Fuera de green'});
   if (note) {
     const excluded = appDispersionClub ? (excludedByClub[appDispersionClub]||0) : excludedTotal;
     const excludedTxt = excluded ? ` (se excluyen ${excluded} golpe${excluded===1?'':'s'} de posición/recuperación/mishit -- ver el criterio en el icono "i" del título)` : '';
+    const scaleTxt = excludedByScale ? ` Además, ${excludedByScale} golpe${excludedByScale===1?'':'s'} a más de ${APPROACH_DISPERSION_MAX_DIST_M}m de bandera no se dibuja${excludedByScale===1?'':'n'} aquí para no desvirtuar la escala del resto (sigue${excludedByScale===1?'':'n'} contando en Rendimiento por palo arriba).` : '';
     note.textContent = appDispersionClub
-      ? `Mostrando solo ${appDispersionClub} (${points.length} golpes)${excludedTxt}. Clic de nuevo en la fila para ver todos los palos.`
-      : `Todos los palos (${points.length} golpes)${excludedTxt} -- mezcla escalas muy distintas (wedge vs. hierro largo), así que compara mejor filtrando por un palo.`;
+      ? `Mostrando solo ${appDispersionClub} (${points.length} golpes)${excludedTxt}. Clic de nuevo en la fila para ver todos los palos.${scaleTxt}`
+      : `Todos los palos (${points.length} golpes)${excludedTxt} -- mezcla escalas muy distintas (wedge vs. hierro largo), así que compara mejor filtrando por un palo.${scaleTxt}`;
   }
 }
 document.getElementById('appPerfBody').addEventListener('click', (e) => {
@@ -5092,6 +5333,59 @@ function computeTeeDispersionPoints(rounds, holes, shots){
   });
   return {points};
 }
+// Elipse de dispersión por palo (sept. 2026, petición de Pau -- "zonas
+// esperadas por palo" tipo Shot Scope, superpuestas a los puntos de
+// resultado ya existentes). Ajuste estadístico estándar: media + matriz
+// de covarianza de (fo, dist) del palo, con el contorno a la distancia de
+// Mahalanobis correspondiente a una confianza dada (chi-cuadrado con 2
+// grados de libertad: x = -2*ln(1-p), p.ej. p=0.5 -> x=1.386). Se eligió
+// 50% como valor por defecto (no un "1 sigma" ad-hoc) porque es una
+// cantidad estadística bien definida y fácil de explicar: la mitad de los
+// golpes de ese palo, en esta ventana, caen dentro del óvalo -- no es un
+// límite de seguridad ni un peor caso, es el núcleo denso de la
+// distribución. El contorno se genera como 64 puntos en el espacio de
+// DATOS (metros) y se devuelve sin transformar -- quien llama lo pasa por
+// xAt/yAt (que pueden tener escalas X/Y distintas, ver comentario de
+// computeFairwayXDomain/YDomain) para que la elipse salga correcta en
+// pantalla aunque los dos ejes no compartan la misma escala de píxeles
+// por metro.
+function computeClubEllipse(points, confidence){
+  const n = points.length;
+  const mx = mean(points.map(p=>p.fo));
+  const my = mean(points.map(p=>p.dist));
+  let sxx=0, syy=0, sxy=0;
+  points.forEach(p => { const dx=p.fo-mx, dy=p.dist-my; sxx+=dx*dx; syy+=dy*dy; sxy+=dx*dy; });
+  sxx/=(n-1); syy/=(n-1); sxy/=(n-1);
+  const trace = sxx+syy, det = sxx*syy - sxy*sxy;
+  const tmp = Math.sqrt(Math.max(0, (trace/2)*(trace/2) - det));
+  const lambda1 = trace/2 + tmp, lambda2 = Math.max(0, trace/2 - tmp);
+  const theta = (Math.abs(sxy) < 1e-9) ? 0 : 0.5*Math.atan2(2*sxy, sxx-syy);
+  const scale = Math.sqrt(-2*Math.log(1-confidence));
+  const a = Math.sqrt(lambda1)*scale, b = Math.sqrt(lambda2)*scale;
+  const STEPS = 64, boundary = [];
+  for (let i=0; i<=STEPS; i++){
+    const t = (i/STEPS)*Math.PI*2;
+    const ex = a*Math.cos(t), ey = b*Math.sin(t);
+    boundary.push({
+      fo: mx + ex*Math.cos(theta) - ey*Math.sin(theta),
+      dist: my + ex*Math.sin(theta) + ey*Math.cos(theta),
+    });
+  }
+  return {n, meanFo: mx, meanDist: my, boundary};
+}
+const CLUB_ELLIPSE_CONFIDENCE = 0.5;
+// Mínimo matemático para poder calcular SIQUIERA una covarianza (n-1 en el
+// denominador de la varianza muestral) -- con n=1 no hay dispersión que
+// medir, así que esos palos se quedan sin elipse pase lo que pase. Pau
+// pidió explícitamente ver la elipse de TODOS los palos aunque tengan
+// muestra pequeña (antes se exigía n>=8, el mismo umbral de "muestra
+// pequeña" que el resto del dashboard) -- ahora esa distinción no excluye
+// la elipse, solo cambia cómo se dibuja: por debajo de
+// CLUB_ELLIPSE_RELIABLE_N el trazo sale discontinuo y más tenue, como
+// aviso visual de que la forma es poco fiable con tan pocos golpes, sin
+// dejar de mostrarla.
+const CLUB_ELLIPSE_MIN_N = 2;
+const CLUB_ELLIPSE_RELIABLE_N = 8;
 // Dominio (+ paso de rejilla) de cada eje a partir de un conjunto de
 // puntos -- factorizado aparte para poder calcularlo UNA VEZ sobre todos
 // los palos y reutilizarlo aunque la vista esté filtrada a un solo palo
@@ -5111,7 +5405,7 @@ function computeFairwayYDomain(points){
   return {domain: Math.ceil((maxDist||step)/step)*step + step*0.12, step};
 }
 function drawFairwayDispersion(opts){
-  const {svg, legend, tooltip, wrap, points, goodLabel, badLabel, xAxis, yAxis} = opts;
+  const {svg, legend, tooltip, wrap, points, goodLabel, badLabel, xAxis, yAxis, clubEllipses, selectedClub} = opts;
   if (!points.length) { clearChartEmpty(wrap, svg, legend, 'No hay golpes en esta selección.'); return; }
   showChart(wrap, svg);
   svg.innerHTML = ''; legend.innerHTML = '';
@@ -5139,6 +5433,27 @@ function drawFairwayDispersion(opts){
   // marca de salida (tee), abajo en el centro
   svg.appendChild(svgEl('circle', {cx, cy:plotBottom, r:4, class:'dispersion-flag'}));
 
+  // Elipses de zona esperada por palo (fondo, debajo de los puntos --
+  // petición de Pau de superponer ambas vistas en vez de sustituir/
+  // alternar). Si hay un palo aislado (clic en la fila de la tabla), su
+  // elipse se resalta y el resto se atenúa en vez de ocultarse, para
+  // mantener el contexto de dónde caen los demás palos.
+  (clubEllipses || []).forEach(ec => {
+    const emphasize = !selectedClub || selectedClub === ec.club;
+    const reliable = ec.n >= CLUB_ELLIPSE_RELIABLE_N;
+    const d = 'M ' + ec.boundary.map(p => `${xAt(p.fo).toFixed(2)},${yAt(p.dist).toFixed(2)}`).join(' L ') + ' Z';
+    const attrs = {
+      d, fill: ec.color, stroke: ec.color,
+      'fill-opacity': (emphasize ? 0.13 : 0.04) * (reliable ? 1 : 0.7),
+      'stroke-opacity': (emphasize ? 0.85 : 0.28) * (reliable ? 1 : 0.75),
+      'stroke-width': selectedClub === ec.club ? 2.5 : 1.3,
+    };
+    if (!reliable) attrs['stroke-dasharray'] = '5 4'; // muestra pequeña (<8) -- forma poco fiable, no se oculta pero se marca
+    const path = svgEl('path', attrs);
+    path.style.pointerEvents = 'none';
+    svg.appendChild(path);
+  });
+
   points.forEach(p => {
     const x = xAt(p.fo), y = yAt(p.dist);
     const dot = svgEl('circle', {cx:x, cy:y, r:5, fill: p.fir ? 'var(--good)' : 'var(--critical)', class:'dispersion-point'});
@@ -5164,6 +5479,40 @@ function drawFairwayDispersion(opts){
     item.innerHTML = `<span class="legend-swatch" style="background:${s.color}"></span>${s.label}`;
     legend.appendChild(item);
   });
+  if (clubEllipses && clubEllipses.length) {
+    const brk = document.createElement('div');
+    brk.style.cssText = 'flex-basis:100%;height:0';
+    legend.appendChild(brk);
+    const caption = document.createElement('div');
+    caption.style.cssText = 'font-size:11.5px;color:var(--muted);margin-top:2px';
+    caption.textContent = 'Zona esperada por palo (50% de sus golpes, esta ventana):';
+    legend.appendChild(caption);
+    const brk2 = document.createElement('div');
+    brk2.style.cssText = 'flex-basis:100%;height:0';
+    legend.appendChild(brk2);
+    clubEllipses.forEach(ec => {
+      const item = document.createElement('div');
+      item.className = 'legend-item club-ellipse-legend-item';
+      item.dataset.club = ec.club;
+      // La leyenda NUNCA atenúa los palos no seleccionados (antes sí, y
+      // Pau lo confundía con que la leyenda "desaparecía" y no volvía al
+      // desmarcar) -- todos los palos se quedan siempre a opacidad plena
+      // y visibles; el único cambio al aislar un palo es un resalte en
+      // ESE elemento concreto (fondo + negrita), nunca una atenuación del
+      // resto. El atenuado de verdad (para dar contexto) sigue existiendo
+      // solo en las propias elipses del gráfico, no aquí.
+      const isSelected = selectedClub === ec.club;
+      item.style.cssText = `cursor:pointer;${isSelected ? `font-weight:600;background:color-mix(in srgb, ${ec.color} 16%, transparent);border-radius:5px;padding:3px 7px;margin:-3px -7px` : ''}`;
+      const reliable = ec.n >= CLUB_ELLIPSE_RELIABLE_N;
+      const swatchStyle = `background:${ec.color};border-radius:3px;width:14px;height:9px${reliable ? '' : ';opacity:0.6;box-shadow:inset 0 0 0 1px var(--border-strong)'}`;
+      item.innerHTML = `<span class="legend-swatch" style="${swatchStyle}"></span>${ec.club} (n=${ec.n})${reliable ? '' : ' · muestra pequeña'}`;
+      item.addEventListener('click', () => {
+        teeDispersionClub = (teeDispersionClub === ec.club) ? null : ec.club;
+        render();
+      });
+      legend.appendChild(item);
+    });
+  }
 }
 function renderTeeDispersion(rounds, holes, shots){
   const svg = document.getElementById('teeDispersionChart'), legend = document.getElementById('teeDispersionLegend'),
@@ -5179,11 +5528,26 @@ function renderTeeDispersion(rounds, holes, shots){
   const xAxis = computeFairwayXDomain(allPoints);
   const yAxis = computeFairwayYDomain(allPoints);
   let points = teeDispersionClub ? allPoints.filter(p => p.club === teeDispersionClub) : allPoints;
-  drawFairwayDispersion({svg, legend, tooltip, wrap, points, goodLabel:'Calle', badLabel:'Fuera de calle', xAxis, yAxis});
+  // Elipses por palo: SIEMPRE sobre todos los palos de la ventana actual
+  // (allPoints, no el `points` ya filtrado por fila) -- son una
+  // referencia de comparación entre palos, así que no deberían
+  // desaparecer al aislar uno solo, solo perder énfasis (ver
+  // drawFairwayDispersion). Solo se calcula la elipse de un palo si tiene
+  // al menos CLUB_ELLIPSE_MIN_N golpes en esta ventana -- con menos, la
+  // covarianza no es fiable y la forma resultante puede ser engañosa.
+  const byClubForEllipse = {};
+  allPoints.forEach(p => { (byClubForEllipse[p.club] = byClubForEllipse[p.club] || []).push(p); });
+  const clubEllipses = Object.keys(byClubForEllipse)
+    .filter(club => byClubForEllipse[club].length >= CLUB_ELLIPSE_MIN_N)
+    .sort((a,b) => clubOrderIndex(a) - clubOrderIndex(b))
+    .map(club => ({club, color: clubColor(club), ...computeClubEllipse(byClubForEllipse[club], CLUB_ELLIPSE_CONFIDENCE)}));
+  drawFairwayDispersion({svg, legend, tooltip, wrap, points, goodLabel:'Calle', badLabel:'Fuera de calle', xAxis, yAxis, clubEllipses, selectedClub: teeDispersionClub});
   if (note) {
+    const skipped = Object.keys(byClubForEllipse).filter(c => byClubForEllipse[c].length < CLUB_ELLIPSE_MIN_N);
+    const skipNote = skipped.length ? ` Sin elipse posible (1 solo golpe, no hay dispersión que medir): ${skipped.join(', ')}.` : '';
     note.textContent = teeDispersionClub
-      ? `Mostrando solo ${teeDispersionClub} (${points.length} golpes). Ejes fijos (iguales para todos los palos, para comparar dispersión y alcance). Clic de nuevo en la fila para ver todos los palos.`
-      : `Todos los palos (${points.length} golpes) -- mezcla distancias muy distintas (driver vs. hierro corto), así que compara mejor filtrando por un palo.`;
+      ? `Mostrando solo ${teeDispersionClub} (${points.length} golpes). Ejes fijos (iguales para todos los palos, para comparar dispersión y alcance). Clic de nuevo en la fila (o en su color en la leyenda) para ver todos los palos.${skipNote}`
+      : `Todos los palos (${points.length} golpes) -- mezcla distancias muy distintas (driver vs. hierro corto), así que compara mejor filtrando por un palo o clicando su color en la leyenda.${skipNote}`;
   }
 }
 document.getElementById('teePerfBody').addEventListener('click', (e) => {
@@ -7572,8 +7936,9 @@ function render(){
   // --- Recurrent holes: holes that repeat worse/better ---
   renderHolesSections(rounds, holes);
 
-  // --- Clubs: distancias por palo + rendimiento + lie/situation combos ---
+  // --- Clubs: distancias por palo + consistencia + rendimiento + lie/situation combos ---
   renderClubDistanceChart(shots);
+  renderClubConsistencySection(rounds, holes, shots);
   renderClubPerfSection(rounds, holes, shots);
   renderClubLieTable(rounds, shots);
 
@@ -7610,6 +7975,7 @@ setupSortableTable('clubBody', CLUB_COMBO_SORT_COLUMNS, render);
 setupSortableTable('teePerfBody', CLUB_PERF_SORT_COLUMNS, render);
 setupSortableTable('appPerfBody', CLUB_PERF_SORT_COLUMNS, render);
 setupSortableTable('sgPerfBody', CLUB_PERF_SORT_COLUMNS, render);
+setupSortableTable('clubConsistencyBody', CLUB_CONSISTENCY_SORT_COLUMNS, render);
 setupSortableTable('roundHoleBody', ROUND_HOLE_SORT_COLUMNS, render);
 setupSortableTable('courseHoleBody', COURSE_HOLE_SORT_COLUMNS, render);
 setupSortableTable('roundsListBody', ROUNDS_LIST_SORT_COLUMNS, render, 'roundsListHeadTable');
