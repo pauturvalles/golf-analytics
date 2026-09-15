@@ -397,6 +397,14 @@
     font-style: italic;
     font-weight: 600;
     flex: none;
+    /* explicit reset, same reasoning as .info-tooltip's white-space fix below:
+       a tip-trigger nested inside an ancestor styled with `text-transform:
+       uppercase` (e.g. a plain <th>, or .lrs-deltas-head on the Resumen tab's
+       radar caption) otherwise inherits it, so the literal lowercase "i" in
+       the markup renders visually as "I". Explicit `none` here makes the icon
+       immune to this regardless of where it sits.
+    */
+    text-transform: none;
   }
   .tip-trigger:hover .info-dot, .tip-trigger:focus-visible .info-dot { color: var(--ink); border-color: var(--ink-2); }
   .info-tooltip {
@@ -774,6 +782,13 @@
   th.sortable-th:hover { color: var(--ink); }
   th.sortable-th:focus-visible { outline: 2px solid var(--tee); outline-offset: 2px; }
   th.sortable-th.sort-active { color: var(--ink); }
+  /* Same sortable-header look as th.sortable-th above, for a [data-key] span
+     inside a CSS-grid list header (.shot-row-head) instead of a real <th> --
+     currently only "Mejores golpes" (Palos), see setupSortableDivHeader. */
+  .shot-row-head .sortable-th { cursor: pointer; user-select: none; }
+  .shot-row-head .sortable-th:hover { color: var(--ink); }
+  .shot-row-head .sortable-th:focus-visible { outline: 2px solid var(--tee); outline-offset: 2px; }
+  .shot-row-head .sortable-th.sort-active { color: var(--ink); }
   .sort-arrow { display: inline-block; margin-left: 4px; font-size: 9px; color: var(--ink-2); }
   td {
     padding: 12px 12px;
@@ -984,9 +999,19 @@
      only needs to override grid-template-columns. Same minmax(min,Nfr)
      fill-the-card approach as the base .shot-row above, fr-weighted the
      same way (proportional to the old fixed maxes), for the same reason:
-     no leftover gutter after the last column, no single column hogging it. */
+     no leftover gutter after the last column, no single column hogging it.
+     Re-weighted (Pau) after "Mejores golpes" (Palos) started reusing this
+     same class: that list's location label is "Campo · Fecha · Hoyo" (the
+     Campos-tab original is just "Fecha · Hoyo", no course prefix), up to
+     ~39 characters -- at the old 3fr share the longest ones wrapped to two
+     lines. Lie never needs more than "Fairway" (7 chars) worth of room, so
+     its share dropped from 1.4fr to 0.6fr and moved straight to the first
+     column instead (3fr -> 4fr, plus a wider 130px floor); Palo/Distancia/
+     Restante/SG each gave up a little too, still comfortably wider than
+     their own longest values at every width -- see measured column widths
+     in the change log if this ever needs revisiting. */
   .shot-row.shot-row-top10, .shot-row-head.shot-row-top10 {
-    grid-template-columns: minmax(112px,3fr) minmax(50px,1.7fr) minmax(62px,1.4fr) minmax(56px,1.4fr) minmax(58px,1.5fr) minmax(42px,1fr);
+    grid-template-columns: minmax(130px,4fr) minmax(100px,1.5fr) minmax(50px,0.6fr) minmax(50px,1fr) minmax(56px,1.1fr) minmax(42px,1fr);
   }
   /* At its minmax floors the shot-row-top10 grid is wider than a phone
      viewport (the wide date+hole column plus the new Restante column no
@@ -1631,25 +1656,38 @@
 
   <section>
     <div class="section-head">
-      <h2><span class="tip-trigger" tabindex="0"><span>Otras combinaciones de palo + situación a vigilar</span><span class="info-dot">i</span><span class="info-tooltip">Golpes que no son putts, agrupados por palo, tipo de lie y distancia al hoyo antes del golpe (&lt;50m / 50-100m / 100-150m / 150m+, o "Tee"; mínimo 8 golpes en la muestra), ordenados por SG medio por golpe — es decir, dónde pierdes más por golpe, no en total.</span></span></h2>
+      <h2><span class="tip-trigger" tabindex="0"><span>Mejores golpes</span><span class="info-dot">i</span><span class="info-tooltip">Todo golpe "extraordinario" (SG &ge; 1.0) de todo el histórico en esta selección (cualquier palo, cualquier campo) -- no un top N fijo, para no esconder un golpazo real en una racha con mucho volumen ni rellenar con golpes normales en una racha floja. El umbral se validó contra la distribución real: 16 golpes lo superan en todo el histórico (37 con &ge;0.8, solo 3 con &ge;1.5), un tamaño de lista que se queda en "esto sí fue especial" sin quedarse corto ni desbordarse. Mismo formato de fila que "Top 10 golpes" en la pestaña Campos, pero sin desglose por área de juego (aquí se filtra por <b>lie</b> en su lugar) y abarcando todos los campos a la vez, así que cada fila añade el nombre del campo delante de la fecha. <b>Restante</b> = distancia que quedaba al hoyo justo después de ese golpe ("Embocado" si lo metió). El selector de ventana (últimas 3/5/10/histórico completo) funciona igual que en el resto de tablas de esta pestaña, sobre las rondas de la selección global. Haz clic en cualquier cabecera de columna para ordenar (por defecto, SG de mayor a menor).</span></span></h2>
     </div>
     <div class="card">
       <div class="controls-row" style="margin-bottom:14px">
-        <div class="seg-control" id="clubWindowControl">
+        <div class="seg-control" id="clubBestShotsWindowControl">
           <button class="seg-btn" data-window="recent3">Últimas 3</button>
           <button class="seg-btn" data-window="recent5">Últimas 5</button>
-          <button class="seg-btn active" data-window="recent10">Últimas 10</button>
-          <button class="seg-btn" data-window="all">Selección completa</button>
+          <button class="seg-btn" data-window="recent10">Últimas 10</button>
+          <button class="seg-btn active" data-window="all">Histórico completo</button>
         </div>
-        <span class="win-note" id="clubWindowNote"></span>
+        <span class="win-note" id="clubBestShotsWindowNote"></span>
       </div>
-      <div class="table-scroll">
-      <table class="club-table">
-        <thead>
-          <tr><th>Palo</th><th>Situación</th><th>Distancia</th><th class="num">SG / golpe</th><th class="num">SG total</th><th class="num">Golpes</th></tr>
-        </thead>
-        <tbody id="clubBody"></tbody>
-      </table>
+      <div class="controls-row" style="margin-bottom:14px">
+        <div class="seg-control" id="clubBestShotsLieControl">
+          <button class="seg-btn active" data-lie="all">Todos los lies</button>
+          <button class="seg-btn" data-lie="Tee">Tee</button>
+          <button class="seg-btn" data-lie="Fairway">Calle</button>
+          <button class="seg-btn" data-lie="Rough">Rough</button>
+          <button class="seg-btn" data-lie="Bunker">Bunker</button>
+          <button class="seg-btn" data-lie="Green">Green</button>
+        </div>
+      </div>
+      <div class="shot-row-scroll">
+        <div class="shot-row-head shot-row-top10" id="clubBestShotsHead">
+          <span data-key="loc">Campo · Fecha · Hoyo</span>
+          <span data-key="club">Palo</span>
+          <span data-key="lie">Lie</span>
+          <span class="num" data-key="dist">Distancia</span>
+          <span class="num" data-key="rem">Restante</span>
+          <span class="num" data-key="sg">SG</span>
+        </div>
+        <div id="clubBestShots"></div>
       </div>
     </div>
   </section>
@@ -1670,7 +1708,7 @@
           <button class="seg-btn" data-window="all">Muestra completa</button>
         </div>
         <span class="win-note" id="holesWindowNote"></span>
-        <span class="tip-trigger" tabindex="0"><span class="info-dot">i</span><span class="info-tooltip"><b>Expected</b> = una expectativa de dificultad externa, no basada en cómo TÚ jugaste este hoyo: shrinkage entre (a) tu media histórica en otros hoyos con el mismo par y stroke index, y (b) tu media histórica en hoyos de ese mismo par — ambas EXCLUYENDO las rondas de este propio hoyo. weight = n/(n+10).<br><br><b>Avg Score</b> = tu media histórica real en este hoyo. <b>Vs Expected</b> = Avg Score &minus; Expected: positivo = peor de lo esperado, negativo = mejor. <b>Recent Avg (Last 3)</b> / <b>Trend</b> = media de las últimas 3 veces (o menos) menos Avg Score — negativo = mejorando. <b>Blow-up Rate</b> = % de veces con score &ge; par+2; <b>Damage</b> = media de (score &minus; Expected) solo en esas ocasiones. Haz clic en cualquier cabecera de columna para ordenar.</span></span>
+        <span class="tip-trigger" tabindex="0"><span class="info-dot">i</span><span class="info-tooltip"><b>Expected</b> = una expectativa de dificultad externa, no basada en cómo TÚ jugaste este hoyo: shrinkage entre (a) tu media histórica en otros hoyos con el mismo par y stroke index, y (b) tu media histórica en hoyos de ese mismo par — ambas EXCLUYENDO las rondas de este propio hoyo. weight = n/(n+10).<br><br><b>Avg Score</b> = tu media histórica real en este hoyo. <b>Vs Expected</b> = Avg Score &minus; Expected: positivo = peor de lo esperado, negativo = mejor. <b>Avg (last 3)</b> / <b>Trend</b> = media de las últimas 3 veces (o menos) menos Avg Score — negativo = mejorando. <b>Double+ %</b> = % de veces que este hoyo terminó en doble bogey o peor. <b>Blow-up Rate</b> = % de veces con score &ge; par+2; <b>Damage</b> = media de (score &minus; Expected) solo en esas ocasiones. Haz clic en cualquier cabecera de columna para ordenar.</span></span>
         <div id="holesTableColToggleAnchor" style="margin-left:auto"></div>
       </div>
       <div class="table-scroll">
@@ -1684,9 +1722,9 @@
             <th class="num">Avg Score</th>
             <th class="num">Expected</th>
             <th class="num">Vs Expected</th>
-            <th class="num">Recent Avg (Last 3)</th>
+            <th class="num">Avg (last 3)</th>
             <th class="num">Trend</th>
-            <th class="num" title="Número de veces que este hoyo terminó en doble bogey o peor">Double+</th>
+            <th class="num" title="% de veces que este hoyo terminó en doble bogey o peor">Double+ %</th>
             <th class="num">Penalty %</th>
             <th class="num">GIR %</th>
             <th class="num">FIR %</th>
@@ -1726,9 +1764,9 @@
             <th class="num">Avg Score</th>
             <th class="num">Expected</th>
             <th class="num">Vs Expected</th>
-            <th class="num">Recent Avg (Last 3)</th>
+            <th class="num">Avg (last 3)</th>
             <th class="num">Trend</th>
-            <th class="num" title="Número de veces que este hoyo terminó en doble bogey o peor">Double+</th>
+            <th class="num" title="% de veces que este hoyo terminó en doble bogey o peor">Double+ %</th>
             <th class="num">Penalty %</th>
             <th class="num">GIR %</th>
             <th class="num">FIR %</th>
@@ -1749,12 +1787,12 @@
 
   <section>
     <div class="section-head">
-      <h2><span class="tip-trigger" tabindex="0"><span>Campos</span><span class="info-dot">i</span><span class="info-tooltip">Un campo por fila (los tres recorridos de La Sella cuentan como campos separados, igual que en el filtro de Campo de arriba). <b>Par</b>, <b>Gross</b>, <b>Net</b>, <b>Stableford</b> y <b>SG Total</b> son la media de esa parte del campo en cada visita (vs. par); si una ronda combina dos recorridos, cada uno cuenta solo su propia parte. Si un campo tiene visitas de 9 y 18 hoyos mezcladas (marcado con "norm. 18h" -- hoy en día, solo Oliva Nova), esos cinco se normalizan a un equivalente de 18 hoyos por visita antes de promediar, para que no salgan valores sin sentido a medio camino entre una vuelta de 9 y una de 18. <b>GIR %</b> está restringido a los hoyos de este campo dentro de cada visita (ya es un porcentaje por hoyo, no necesita normalizarse). <b>Nivel jugado</b> es el diferencial de puntuación oficial del WHS de cada visita, calculado solo con los hoyos de este recorrido (aunque esa visita combinara dos recorridos de La Sella el mismo día) y su propio Valor de Campo/Slope individual, promediado sobre todas las visitas. <b>Problema principal</b> = categorías de SG (Tee/Approach/Short Game/Putting) cuya media por visita es &le; -2 SG. Haz clic en una fila para ver su detalle debajo.</span></span></h2>
+      <h2><span class="tip-trigger" tabindex="0"><span>Campos</span><span class="info-dot">i</span><span class="info-tooltip">Un campo por fila (los tres recorridos de La Sella cuentan como campos separados, igual que en el filtro de Campo de arriba). <b>Par</b>, <b>Gross</b>, <b>Net</b>, <b>Stableford</b> y <b>SG Total</b> son la media de esa parte del campo en cada visita (vs. par); si una ronda combina dos recorridos, cada uno cuenta solo su propia parte. Si un campo tiene visitas de 9 y 18 hoyos mezcladas (marcado con "norm. 18h" -- hoy en día, solo Oliva Nova), esos cinco se normalizan a un equivalente de 18 hoyos por visita antes de promediar, para que no salgan valores sin sentido a medio camino entre una vuelta de 9 y una de 18. <b>GIR %</b> está restringido a los hoyos de este campo dentro de cada visita (ya es un porcentaje por hoyo, no necesita normalizarse). <b>Nivel jugado</b> es el diferencial de puntuación oficial del WHS de cada visita, calculado solo con los hoyos de este recorrido (aunque esa visita combinara dos recorridos de La Sella el mismo día) y su propio Valor de Campo/Slope individual, promediado sobre todas las visitas. <b>Avg (last 3)</b> = media de SG Total de las últimas 3 visitas a este campo (o menos, si hay menos de 3). <b>Trend</b> = Avg (last 3) &minus; SG Total; aquí, a diferencia de las tablas de hoyos, positivo = mejorando (SG Total más alto es mejor). Haz clic en una fila para ver su detalle debajo.</span></span></h2>
     </div>
     <div class="card table-scroll">
       <table id="coursesTable">
         <thead>
-          <tr><th>Campo</th><th class="num">N</th><th class="num">Par</th><th class="num">Gross</th><th class="num">Net</th><th class="num">Stableford</th><th class="num">SG Total</th><th class="num">GIR %</th><th class="num">Nivel jugado</th><th>Problema principal</th></tr>
+          <tr><th>Campo</th><th class="num">N</th><th class="num">Par</th><th class="num">Gross</th><th class="num">Net</th><th class="num">Stableford</th><th class="num">SG Total</th><th class="num">Avg (last 3)</th><th class="num">Trend</th><th class="num">GIR %</th><th class="num">Nivel jugado</th></tr>
         </thead>
         <tbody id="coursesListBody"></tbody>
       </table>
@@ -2111,6 +2149,56 @@ function updateSortHeaderUI(tableId){
     const arrow = th.querySelector('.sort-arrow');
     const active = !!(state && state.key === col.key);
     th.classList.toggle('sort-active', active);
+    if (arrow) arrow.textContent = active ? (state.dir === 'asc' ? ' ▲' : ' ▼') : '';
+  });
+}
+// Same idea as setupSortableTable/updateSortHeaderUI above, for a header
+// that's a plain [data-key] <span> inside a CSS-grid div (.shot-row-head)
+// instead of a <th> inside a real <table> -- currently only "Mejores
+// golpes" (Palos) needs this, since it's the only shot-row-* list Pau asked
+// to make sortable. Deliberately NOT folded into setupSortableTable itself
+// (e.g. by making it accept a header element instead of a table): that
+// function is depended on by every real <table> in the dashboard, and
+// reshaping its DOM assumptions to also cover a div/grid layout risks
+// breaking one of those for the sake of a single list. sortState/sortRows
+// need no change either way -- they're plain data keyed by tableId, with no
+// DOM assumptions of their own.
+function setupSortableDivHeader(headerId, tableId, columns, rerenderFn){
+  const head = document.getElementById(headerId);
+  if (!head) return;
+  const spans = head.querySelectorAll('[data-key]');
+  spans.forEach((span, i) => {
+    const col = columns[i];
+    if (!col) return;
+    span.classList.add('sortable-th');
+    span.tabIndex = 0;
+    if (!span.querySelector('.sort-arrow')) {
+      const arrow = document.createElement('span');
+      arrow.className = 'sort-arrow';
+      span.appendChild(arrow);
+    }
+    const activate = () => {
+      const cur = sortState[tableId];
+      if (cur && cur.key === col.key) cur.dir = (cur.dir === 'asc' ? 'desc' : 'asc');
+      else sortState[tableId] = {key: col.key, dir: col.initialDir || 'desc'};
+      rerenderFn();
+    };
+    span.onclick = activate;
+    span.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); } };
+  });
+  updateSortHeaderUIDiv(headerId, tableId, columns);
+}
+function updateSortHeaderUIDiv(headerId, tableId, columns){
+  const head = document.getElementById(headerId);
+  if (!head) return;
+  const state = sortState[tableId];
+  const spans = head.querySelectorAll('[data-key]');
+  spans.forEach((span, i) => {
+    const col = columns[i];
+    if (!col) return;
+    const arrow = span.querySelector('.sort-arrow');
+    const active = !!(state && state.key === col.key);
+    span.classList.toggle('sort-active', active);
     if (arrow) arrow.textContent = active ? (state.dir === 'asc' ? ' ▲' : ' ▼') : '';
   });
 }
@@ -4176,11 +4264,11 @@ const HOLE16_COL_GROUPS = [
     {idx:5, label:'Avg Score'},
     {idx:6, label:'Expected'},
     {idx:7, label:'Vs Expected'},
-    {idx:8, label:'Recent Avg (Last 3)'},
+    {idx:8, label:'Avg (last 3)'},
     {idx:9, label:'Trend'},
   ]},
   {label:'Errores', cols:[
-    {idx:10, label:'Double+'},
+    {idx:10, label:'Double+ %'},
     {idx:11, label:'Penalty %'},
     {idx:15, label:'Blow-up Rate'},
     {idx:16, label:'Damage'},
@@ -4241,7 +4329,7 @@ const HOLE_TABLE_SORT_COLUMNS = [
   {key:'vsExpected', accessor:r=>r.vsExpected, numeric:true, initialDir:'desc'},
   {key:'recentAvg', accessor:r=>r.recentAvg, numeric:true, initialDir:'desc'},
   {key:'trend', accessor:r=>r.trend, numeric:true, initialDir:'desc'},
-  {key:'doubleCount', accessor:r=>r.doubleCount, numeric:true, initialDir:'desc'},
+  {key:'doubleCount', accessor:r=>r.times ? r.doubleCount/r.times : 0, numeric:true, initialDir:'desc'},
   {key:'penRate', accessor:r=>r.penRate, numeric:true, initialDir:'desc'},
   {key:'girPct', accessor:r=>r.girPct, numeric:true, initialDir:'desc'},
   {key:'firPct', accessor:r=>r.firPct, numeric:true, initialDir:'desc'},
@@ -4275,7 +4363,7 @@ function renderHoleTable(tbodyId, rows){
     const trendTd = document.createElement('td'); trendTd.className='num';
     trendTd.innerHTML = `<span style="color:${r.trend<=-0.15?'var(--good)':(r.trend>=0.15?'var(--critical)':'var(--muted)')}">${fmtSigned(r.trend)}</span>`;
     tr.appendChild(trendTd);
-    cell(r.doubleCount, 'num');
+    cell(Math.round(r.doubleCount/r.times*100)+'%', 'num');
     cell(Math.round(r.penRate)+'%', 'num');
     cell(Math.round(r.girPct)+'%', 'num');
     cell(r.firPct===null?'—':Math.round(r.firPct)+'%', 'num');
@@ -4312,24 +4400,6 @@ function renderHolesSections(rounds, holes){
 // Section: club/lie/distance leak table
 // ============================================================
 const CLUB_LIE_LABEL = {Tee:'Tee', Fairway:'Fairway', Rough:'Rough', Bunker:'Bunker', Green:'Green'};
-// Distance band uses the same corrected "distance to hole before this shot" as
-// the proximity KPIs (previous shot's remaining_m, via computeStartDistMap) —
-// NOT `dist` (that's the shot's own carry, see the note on computeStartDistMap
-// above). Tee shots have no previous shot to measure from, so they get their
-// own fixed "Tee" band instead of a distance range.
-const DIST_BANDS = [
-  {label:'<50m', test:d => d < 50},
-  {label:'50-100m', test:d => d >= 50 && d < 100},
-  {label:'100-150m', test:d => d >= 100 && d < 150},
-  {label:'150m+', test:d => d >= 150},
-];
-function bandFor(s, startMap){
-  if (s.lie === 'Tee') return 'Tee';
-  const d = startMap.get(s);
-  if (d === undefined || d === null) return null;
-  const band = DIST_BANDS.find(b => b.test(d));
-  return band ? band.label : null;
-}
 // Shared "recency window" control: a snapshot filter to just the most recent N
 // rounds of the current top-level selection — distinct from the rolling-average
 // window used by the mode/window chart controls elsewhere (that one slides
@@ -4366,55 +4436,101 @@ function syncWindowControl(containerId, value){
   el.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.dataset.window === value));
 }
 
-let clubWindow = 'recent10'; // 'all' | 'recent10' | 'recent5' | 'recent3'
-const BAND_ORDER = {Tee:0, '<50m':1, '50-100m':2, '100-150m':3, '150m+':4};
-const CLUB_COMBO_SORT_COLUMNS = [
-  {key:'club', accessor:r=>r.club, numeric:false, initialDir:'asc'},
-  {key:'lie', accessor:r=>r.lie, numeric:false, initialDir:'asc'},
-  {key:'band', accessor:r=>BAND_ORDER[r.band]??99, numeric:true, initialDir:'asc'},
-  {key:'mean', accessor:r=>r.mean, numeric:true, initialDir:'asc'},
-  {key:'sum', accessor:r=>r.sum, numeric:true, initialDir:'asc'},
-  {key:'count', accessor:r=>r.count, numeric:true, initialDir:'desc'},
+// "Mejores golpes" (Palos tab) -- every "golpe extraordinario" (SG >= 1.0)
+// across the ENTIRE history in scope, same idea and same .shot-row-top10
+// markup as the Campos tab's own "Top 10 golpes" (renderCourseTopShots
+// below), but with three differences: (1) no área de juego selector -- Pau
+// asked for a recency window (últimas 3/5/10/histórico completo, same
+// WINDOW_SIZES/windowRounds pattern used everywhere else) and a lie filter
+// instead (Todos los lies/Tee/Fairway/Rough/Bunker/Green -- the full
+// CLUB_LIE_LABEL set, including Green, since a holed-out putt is a
+// legitimate "mejor golpe" candidate here, unlike Consistencia de palo
+// which deliberately only covers full-swing shots); (2) since shots can
+// come from any course, not just one, each row's location label is
+// prefixed with the course name too (Campo · Fecha · Hoyo), not just
+// Fecha · Hoyo; (3) fixed threshold instead of a fixed count -- originally
+// a top-10 cutoff, Pau asked to show every shot at or above a "this was
+// extraordinary" bar instead, since a fixed count either hides a genuinely
+// great shot (a busy month pushes it out) or pads the list with
+// unremarkable ones (a quiet stretch). SG>=1.0 was checked against the
+// real distribution before picking it (Pau's own suggestion): 16 shots
+// historically clear it (vs. 37 at >=0.8 and just 3 at >=1.5) -- a "hall of
+// fame" length that stays meaningful without either extreme.
+const CLUB_BEST_SHOTS_MIN_SG = 1.0;
+let clubBestShotsWindow = 'all'; // 'all' | 'recent10' | 'recent5' | 'recent3'
+let clubBestShotsLie = 'all'; // 'all' | 'Tee' | 'Fairway' | 'Rough' | 'Bunker' | 'Green'
+// Sortable by column, like the dashboard's real <table>s -- but this list is
+// a div/CSS-grid layout (.shot-row/.shot-row-head), not an actual <table>,
+// so it can't use setupSortableTable/updateSortHeaderUI as-is (those query
+// `<thead>`/`<th>` specifically). sortState/sortRows themselves are DOM-
+// agnostic (just a plain object keyed by tableId + a stable sort), so they're
+// reused unchanged; only the header-binding/arrow-rendering half gets a
+// small parallel implementation for a [data-key] span header instead of a
+// <th> row -- see setupSortableDivHeader/updateSortHeaderUIDiv below.
+// 'loc' sorts by course name -> round (chronological) -> physical hole
+// number, mirroring the composite key the hoyos-table's own merged "Hoyo"
+// column uses, since "Campo · Fecha · Hoyo" is one combined column here too.
+const CLUB_BEST_SHOTS_SORT_COLUMNS = [
+  {key:'loc', accessor:r=>r.locKey, numeric:false, initialDir:'asc'},
+  {key:'club', accessor:r=>r.cl||'', numeric:false, initialDir:'asc'},
+  {key:'lie', accessor:r=>r.lieLabel||'', numeric:false, initialDir:'asc'},
+  {key:'dist', accessor:r=>r.dist, numeric:true, initialDir:'desc'},
+  {key:'rem', accessor:r=>r.rem, numeric:true, initialDir:'asc'},
+  {key:'sg', accessor:r=>r.sg, numeric:true, initialDir:'desc'},
 ];
-function renderClubLieTable(rounds, shots){
-  const tbody = document.getElementById('clubBody');
-  tbody.innerHTML = '';
-  const effRounds = windowRounds(rounds, clubWindow);
-  syncWindowControl('clubWindowControl', clubWindow);
-  setWindowNote('clubWindowNote', rounds, effRounds, clubWindow);
+function renderClubBestShots(rounds, holes, shots){
+  const effRounds = windowRounds(rounds, clubBestShotsWindow);
+  syncWindowControl('clubBestShotsWindowControl', clubBestShotsWindow);
+  setWindowNote('clubBestShotsWindowNote', rounds, effRounds, clubBestShotsWindow);
+  document.querySelectorAll('#clubBestShotsLieControl .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.lie === clubBestShotsLie));
   const idxSet = new Set(effRounds.map(r=>r.idx));
-  const effShots = shots.filter(s => idxSet.has(s.r));
-  const startMap = computeStartDistMap(effShots);
-  const nonPutt = effShots.filter(s => s.cl !== 'Putter' && s.cl);
-  const groups = {};
-  nonPutt.forEach(s => {
-    const band = bandFor(s, startMap);
-    if (band === null) return; // no reliable distance to band this shot (rare edge case)
-    const key = s.cl + '|' + (s.lie||'—') + '|' + band;
-    (groups[key] = groups[key] || []).push(s.sg);
+  const dateByIdx = {}; DATA.rounds.forEach((r,i) => { dateByIdx[i]=r.d; });
+  // Physical (recorrido) hole number, same r+'|'+h -> rh lookup as
+  // renderCourseTopShots, just built over ALL holes in scope instead of one
+  // course's -- needed because a La Sella recorrido's own holes are
+  // renumbered 1-9 within a combo round (s.h can read e.g. 13).
+  const rhByRoundHole = {};
+  holes.forEach(h => { rhByRoundHole[h.r+'|'+h.h] = h.rh; });
+  const rows = shots.filter(s => {
+    if (s.sg===null || s.sg===undefined || s.sg < CLUB_BEST_SHOTS_MIN_SG) return false;
+    if (!idxSet.has(s.r)) return false;
+    return clubBestShotsLie === 'all' || s.lie === clubBestShotsLie;
+  }).map(s => {
+    const rh = rhByRoundHole[s.r+'|'+s.h];
+    const courseLabel = REAL_COURSE_LABEL[s.rc]||s.rc;
+    return {
+      s, rh, courseLabel,
+      locKey: courseLabel+'|'+String(s.r).padStart(4,'0')+'|'+String(rh!==undefined?rh:s.h).padStart(3,'0'),
+      cl: s.cl, lieLabel: CLUB_LIE_LABEL[s.lie]||s.lie, dist: s.dist, rem: s.rem, sg: s.sg,
+    };
   });
-  const rows = Object.entries(groups)
-    .map(([key, vals]) => {
-      const [club, lie, band] = key.split('|');
-      return {club, lie: CLUB_LIE_LABEL[lie]||lie, band, mean: mean(vals), sum: vals.reduce((a,b)=>a+b,0), count: vals.length};
-    })
-    .filter(r => r.count >= 8)
-    .sort((a,b) => a.mean - b.mean)
-    .slice(0, 8);
-  if (!rows.length) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="6">Ninguna combinación de palo + lie + distancia con al menos 8 golpes en ${clubWindow==='all' ? 'esta selección' : windowLabel(clubWindow)+' de esta selección'}.</td></tr>`;
-    return;
-  }
-  const sortedRows = sortRows('clubBody', rows, CLUB_COMBO_SORT_COLUMNS);
-  sortedRows.forEach(r => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${r.club}</td><td>${r.lie}</td><td>${r.band}</td>
-      <td class="num" style="color:var(--critical)">${fmtSigned(r.mean,3)}</td>
-      <td class="num">${fmtSigned(r.sum,1)}</td>
-      <td class="num">${r.count}</td>`;
-    tbody.appendChild(tr);
-  });
+  rows.sort((a,b) => b.sg - a.sg); // built-in default order (best first) until a header is clicked
+  const sortedRows = sortRows('clubBestShots', rows, CLUB_BEST_SHOTS_SORT_COLUMNS);
+  updateSortHeaderUIDiv('clubBestShotsHead', 'clubBestShots', CLUB_BEST_SHOTS_SORT_COLUMNS);
+  const rowHtml = row => {
+    const s = row.s;
+    let distTxt = '—';
+    if (s.dist!==null && s.dist!==undefined) distTxt = `${Math.round(s.dist)}m`;
+    else if (s.flag==='lost_ball') distTxt = 'Lost ball';
+    else if (s.flag==='penalty_drop') distTxt = 'Penalty';
+    return `<div class="shot-row shot-row-top10">
+      <span class="shot-hole">${row.courseLabel} · ${fmtDateShort(dateByIdx[s.r])} · Hoyo ${row.rh!==undefined?row.rh:s.h}</span>
+      <span class="shot-club">${s.cl||'—'}</span>
+      <span class="shot-lie">${row.lieLabel||'—'}</span>
+      <span class="shot-dist">${distTxt}</span>
+      <span class="shot-dist">${fmtRemaining(s.rem)}</span>
+      <span class="shot-sg" style="color:${s.sg>=0?'var(--good)':'var(--critical)'}">${fmtSigned(s.sg,2)}</span>
+    </div>`;
+  };
+  const lieTxt = clubBestShotsLie === 'all' ? '' : ` en lie ${CLUB_LIE_LABEL[clubBestShotsLie]||clubBestShotsLie}`;
+  document.getElementById('clubBestShots').innerHTML = sortedRows.length ? sortedRows.map(rowHtml).join('')
+    : `<p class="section-note">No hay golpes con SG&ge;${CLUB_BEST_SHOTS_MIN_SG}${lieTxt} en esta selección.</p>`;
+  const noteEl = document.getElementById('clubBestShotsWindowNote');
+  if (noteEl) noteEl.textContent += ` · ${sortedRows.length} golpe${sortedRows.length===1?'':'s'} con SG&ge;${CLUB_BEST_SHOTS_MIN_SG}${lieTxt}.`.replace('&ge;','≥');
 }
+document.getElementById('clubBestShotsLieControl').querySelectorAll('.seg-btn').forEach(btn => {
+  btn.addEventListener('click', () => { clubBestShotsLie = btn.dataset.lie; render(); });
+});
 
 // ============================================================
 // Section: Club performance (Tee / Approach / Short Game)
@@ -6993,22 +7109,6 @@ function courseSgByIdxNormalized(stats){
   });
   return out;
 }
-// Course-level echo of mainIssuesForRound: mean SG per category ACROSS
-// VISITS to this course (not a single round), same <= -2 SG threshold Pau
-// set for the round-level version.
-function mainIssuesForCourse(stats){
-  if (!stats.visitingRounds.length) return [];
-  const sgByIdx = courseSgByIdxNormalized(stats);
-  const cat = {tee:0, app:0, stgame:0, putt:0};
-  stats.visitingRounds.forEach(r => {
-    const sg = sgByIdx[r.idx];
-    cat.tee += sg.tee; cat.app += sg.app; cat.stgame += sg.stgame; cat.putt += sg.putt;
-  });
-  const n = stats.visitingRounds.length;
-  Object.keys(cat).forEach(k => cat[k] /= n);
-  return Object.keys(cat).filter(k => cat[k] <= -2).map(k => SG_SERIES_LABEL_BY_KEY[k]);
-}
-
 // Diferencial de puntuación de UNA VISITA a un recorrido concreto, aislado a
 // SUS PROPIOS hoyos -- incluso si esa visita fue parte de una ronda de 18
 // hoyos que combinaba dos recorridos de La Sella el mismo día. Antes,
@@ -7083,14 +7183,24 @@ function computeCoursesSummary(rounds, holes, shots){
     const netAvg = mean(scaledVisits.map(v=>v.net));
     const stbAvg = mean(scaledVisits.map(v=>v.stb));
     const sgByIdx = courseSgByIdxNormalized(stats);
-    const sgTotalAvg = mean(stats.visitingRounds.map(r => sgByIdx[r.idx].tot));
+    // Avg (last 3) / Trend of SG Total, same "recent vs. historical" idea as
+    // the hoyos-que-se-repiten tables, but over VISITS to this course
+    // (chronological, oldest->newest, hence the idx sort -- stats.visitingRounds
+    // isn't guaranteed sorted) instead of over hole instances. Unlike those
+    // tables, higher SG is better, so the sign is flipped: trend = recentAvg -
+    // overallAvg, positive = improving (recent visits better than the
+    // historical average), negative = worse. With <3 visits, last3 just covers
+    // all of them (same "o menos" convention as the hoyos tables).
+    const sgVisitsOrdered = stats.visitingRounds.slice().sort((a,b)=>a.idx-b.idx).map(r => sgByIdx[r.idx].tot);
+    const sgTotalAvg = mean(sgVisitsOrdered);
+    const sgRecentAvg = mean(sgVisitsOrdered.slice(-3));
+    const sgTrend = sgRecentAvg - sgTotalAvg;
     const girPct = stats.courseHoles.length ? mean(stats.courseHoles.map(h=>h.gir))*100 : null;
-    const issues = mainIssuesForCourse(stats);
     const nivelJugado = courseNivelJugado(stats);
     return {
       rc, label: REAL_COURSE_LABEL[rc]||rc, n: rawVisitEntries.length,
       par: Math.round(parAvg), grossToPar: grossAvg-parAvg, netToPar: netAvg-parAvg,
-      stbAvg, sgTotalAvg, girPct, issues, nivelJugado, mixedHoleCounts: mixed, stats,
+      stbAvg, sgTotalAvg, sgRecentAvg, sgTrend, girPct, nivelJugado, mixedHoleCounts: mixed, stats,
     };
   });
 }
@@ -7137,7 +7247,7 @@ let courseEvoNormalized = false;
 
 // Un accessor por columna del <thead> de #coursesTable, mismo orden que el
 // <thead> en el HTML (Campo, N, Par, Gross, Net, Stableford, SG Total,
-// GIR %, Nivel jugado, Problema principal) -- tabla única (sin split
+// Avg (last 3), Trend, GIR %, Nivel jugado) -- tabla única (sin split
 // header/body como Rondas), así que setupSortableTable no necesita
 // headTableId aquí.
 const COURSES_LIST_SORT_COLUMNS = [
@@ -7148,16 +7258,17 @@ const COURSES_LIST_SORT_COLUMNS = [
   {key:'net', accessor:c=>c.netToPar, numeric:true, initialDir:'asc'},
   {key:'stb', accessor:c=>c.stbAvg, numeric:true, initialDir:'desc'},
   {key:'sg', accessor:c=>c.sgTotalAvg, numeric:true, initialDir:'desc'},
+  {key:'sgRecentAvg', accessor:c=>c.sgRecentAvg, numeric:true, initialDir:'desc'},
+  {key:'sgTrend', accessor:c=>c.sgTrend, numeric:true, initialDir:'desc'},
   {key:'gir', accessor:c=>c.girPct, numeric:true, initialDir:'desc'},
   {key:'nivel', accessor:c=>c.nivelJugado, numeric:true, initialDir:'asc'},
-  {key:'issues', accessor:c=>c.issues.join(', '), numeric:false, initialDir:'asc'},
 ];
 
 function renderCoursesListTable(courses){
   const tbody = document.getElementById('coursesListBody');
   tbody.innerHTML = '';
   if (!courses.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="10">No hay campos en esta selección.</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="11">No hay campos en esta selección.</td></tr>';
     return;
   }
   const rows = sortRows('coursesListBody', courses, COURSES_LIST_SORT_COLUMNS);
@@ -7165,14 +7276,18 @@ function renderCoursesListTable(courses){
     const tr = document.createElement('tr');
     tr.className = 'round-row' + (c.rc===selectedCourse ? ' selected' : '');
     tr.tabIndex = 0;
-    const issuesTxt = c.issues.length ? c.issues.join(', ') : '—';
     const mixMark = c.mixedHoleCounts ? ' <span class="win-note" style="text-transform:none;letter-spacing:normal" title="Este campo mezcla visitas de 9 y 18 hoyos -- Par/Gross/Net/Stableford/SG Total están normalizados a equivalente de 18 hoyos para que sean comparables entre visitas.">(norm. 18h)</span>' : '';
+    // Trend's good/critical threshold mirrors the hoyos-table one (±0.15) but
+    // with the sign flipped -- SG is "higher is better", so recentAvg >
+    // overallAvg (positive trend) is the improving direction here.
+    const trendColor = c.sgTrend>=0.15 ? 'var(--good)' : (c.sgTrend<=-0.15 ? 'var(--critical)' : 'var(--muted)');
     tr.innerHTML = `<td>${c.label}${mixMark}</td><td class="num">${c.n}</td><td class="num">${c.par}</td>
       <td class="num">${fmtToPar(c.grossToPar,1)}</td><td class="num">${fmtToPar(c.netToPar,1)}</td><td class="num">${c.stbAvg.toFixed(1)}</td>
       <td class="num" style="color:${c.sgTotalAvg>=0?'var(--good)':'var(--critical)'}">${fmtSigned(c.sgTotalAvg,2)}</td>
+      <td class="num" style="color:${c.sgRecentAvg>=0?'var(--good)':'var(--critical)'}">${fmtSigned(c.sgRecentAvg,2)}</td>
+      <td class="num"><span style="color:${trendColor}">${fmtSigned(c.sgTrend,2)}</span></td>
       <td class="num">${c.girPct===null?'—':Math.round(c.girPct)+'%'}</td>
-      <td class="num">${c.nivelJugado===null?'—':c.nivelJugado.toFixed(1)}</td>
-      <td>${issuesTxt}</td>`;
+      <td class="num">${c.nivelJugado===null?'—':c.nivelJugado.toFixed(1)}</td>`;
     const select = () => { selectedCourse = c.rc; render(); };
     tr.addEventListener('click', select);
     tr.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); select(); } });
@@ -7940,7 +8055,7 @@ function render(){
   renderClubDistanceChart(shots);
   renderClubConsistencySection(rounds, holes, shots);
   renderClubPerfSection(rounds, holes, shots);
-  renderClubLieTable(rounds, shots);
+  renderClubBestShots(rounds, holes, shots);
 
   // --- Campos: course list + detail for the selected course ---
   renderCoursesTab(rounds, holes, shots);
@@ -7959,7 +8074,7 @@ document.querySelectorAll('.tab-nav .tab-btn').forEach(btn => {
   });
 });
 
-bindWindowControl('clubWindowControl', v => { clubWindow = v; });
+bindWindowControl('clubBestShotsWindowControl', v => { clubBestShotsWindow = v; });
 bindWindowControl('cataWindowControl', v => { cataWindow = v; });
 bindWindowControl('holesWindowControl', v => { holesWindow = v; });
 bindWindowControl('bestHolesWindowControl', v => { holesWindow = v; });
@@ -7971,7 +8086,6 @@ bindWindowControl('roundRadarWindowControl', v => { roundRadarWindow = v; });
 bindWindowControl('courseHoleWindowControl', v => { courseHoleWindow = v; });
 setupSortableTable('holesBody', HOLE_TABLE_SORT_COLUMNS, render);
 setupSortableTable('bestHolesBody', HOLE_TABLE_SORT_COLUMNS, render);
-setupSortableTable('clubBody', CLUB_COMBO_SORT_COLUMNS, render);
 setupSortableTable('teePerfBody', CLUB_PERF_SORT_COLUMNS, render);
 setupSortableTable('appPerfBody', CLUB_PERF_SORT_COLUMNS, render);
 setupSortableTable('sgPerfBody', CLUB_PERF_SORT_COLUMNS, render);
@@ -7980,6 +8094,7 @@ setupSortableTable('roundHoleBody', ROUND_HOLE_SORT_COLUMNS, render);
 setupSortableTable('courseHoleBody', COURSE_HOLE_SORT_COLUMNS, render);
 setupSortableTable('roundsListBody', ROUNDS_LIST_SORT_COLUMNS, render, 'roundsListHeadTable');
 setupSortableTable('coursesListBody', COURSES_LIST_SORT_COLUMNS, render);
+setupSortableDivHeader('clubBestShotsHead', 'clubBestShots', CLUB_BEST_SHOTS_SORT_COLUMNS, render);
 bindRoundsHeaderScrollSync();
 
 initColumnToggle('holesTable', 'holes-repeat-worst', HOLE16_COL_GROUPS);
