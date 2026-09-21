@@ -1238,6 +1238,14 @@
           <div class="kpi-chart-wrap"><svg class="kpi-chart" id="kpiChart-cataSgRound" viewBox="0 0 320 170" style="overflow:visible;display:block"></svg><div class="chart-tooltip kpi-tooltip" id="kpiTooltip-cataSgRound"></div></div>
         </div>
         <div class="kpi-card">
+          <div class="kpi-head"><span class="kpi-label">Golpes para acabar, ataque con wedge (45-100m)<span class="tip-trigger" tabindex="0"><span class="info-dot">i</span><span class="info-tooltip">Por cada hoyo, se localiza el primer golpe (que no sea putt) cuya distancia de inicio cae entre 45.72m y 100m — el mismo corte Approach/Short Game que usa el resto del dashboard como límite inferior — y se cuentan los golpes desde ahí (inclusive) hasta acabar el hoyo, incluida cualquier penalización posterior. Un approach largo que se quede cerca del hoyo, o un chip corto con wedge desde &lt;45.72m, no generan ocasión: solo cuenta cuando el golpe que ataca el green nace ya dentro de esa banda.</span></span></span><span class="kpi-value" id="kpiVal-wedgeAttackStrokes">—</span></div>
+          <div class="kpi-chart-wrap"><svg class="kpi-chart" id="kpiChart-wedgeAttackStrokes" viewBox="0 0 320 170" style="overflow:visible;display:block"></svg><div class="chart-tooltip kpi-tooltip" id="kpiTooltip-wedgeAttackStrokes"></div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-head"><span class="kpi-label">SG desde ataque con wedge (45-100m)<span class="tip-trigger" tabindex="0"><span class="info-dot">i</span><span class="info-tooltip">Misma ocasión que "Golpes para acabar, ataque con wedge" (ver su tooltip para la definición completa), pero en SG en vez de golpes brutos: suma del strokes gained de todos los golpes desde el ataque con wedge (inclusive) hasta acabar el hoyo. Más cercano a 0 o positivo es mejor.</span></span></span><span class="kpi-value" id="kpiVal-wedgeAttackSg">—</span></div>
+          <div class="kpi-chart-wrap"><svg class="kpi-chart" id="kpiChart-wedgeAttackSg" viewBox="0 0 320 170" style="overflow:visible;display:block"></svg><div class="chart-tooltip kpi-tooltip" id="kpiTooltip-wedgeAttackSg"></div></div>
+        </div>
+        <div class="kpi-card">
           <div class="kpi-head"><span class="kpi-label">Resultado neto vs par, por tipo de hoyo<span class="tip-trigger" tabindex="0"><span class="info-dot">i</span><span class="info-tooltip">Tres líneas superpuestas (Par 3/4/5) con el resultado neto medio (golpes por encima/debajo de par, ya descontados los golpes de hándicap) para ese tipo de hoyo. El modo anual muestra en su lugar barras agrupadas (Año A en gris, Año B en color), con el mismo marcador de significancia (&#9679;) que el resto del dashboard.</span></span></span></div>
           <div class="legend">
             <span class="legend-item"><span class="legend-swatch" style="background:var(--tee)"></span>Par 3 <span class="legend-val" id="parTypeVal-p3">—</span></span>
@@ -5769,6 +5777,63 @@ function computeTeeProblemMap(holes, shots){
   return map;
 }
 
+// Para cada hoyo: localiza el primer golpe (en orden `sn`, real -- no
+// penalización -- y no putter) cuya distancia de inicio (rem del golpe
+// anterior, o `h.dm` si es el primer golpe del hoyo -- p.ej. un par 3 corto
+// jugado directamente con wedge desde el tee) cae en la banda de "ataque con
+// wedge" (> APP_THRESHOLD_M y <= 100m). Esa banda reutiliza el propio corte
+// Approach/Short Game del dashboard (45.72m) como límite inferior en vez de
+// inventar un número nuevo, y excluye tanto los approaches largos (>100m,
+// aunque acaben muy cerca del hoyo) como los chips cortos con wedge desde
+// <=45.72m -- a petición explícita de Pau: lo que se quiere medir es "cómo de
+// bien acabo el hoyo cuando ataco el green con un golpe de swing completo con
+// wedge", no cualquier golpe que termine cerca ni cualquier golpe con wedge.
+// Solo se cuenta el PRIMER golpe de cada hoyo que entra en la banda (un
+// approach desde 120m que deja la bola a 1.5m y un putt no cuenta -- ese
+// golpe de entrada viene de fuera de la banda, así que el hoyo directamente
+// no genera ocasión para esta métrica).
+//
+// Golpes para acabar: total de golpes reales desde el golpe de entrada
+// (inclusive) hasta el final del hoyo, más cualquier golpe de penalización
+// (bookkeeping, sin posición propia) cuyo `sn` caiga después del golpe de
+// entrada -- así un error tras el golpe de ataque (p.ej. un wedge a agua)
+// SÍ cuenta contra la métrica, igual que en la experiencia real de Pau
+// jugando el hoyo. SG: suma de `s.sg` de los golpes reales desde la entrada
+// (inclusive) hasta el final; el coste de una penalización posterior ya
+// queda reflejado en el sg del golpe que la provoca, así que no hace falta
+// sumar nada aparte para las filas de penalización.
+function computeWedgeAttackEntries(holes, shots){
+  const real = shots.filter(s => s.et !== 'penalty');
+  const byHoleReal = groupByHole(real);
+  const byHoleAll = groupByHole(shots);
+  Object.values(byHoleReal).forEach(arr => arr.sort((a,b)=>a.sn-b.sn));
+  const results = [];
+  holes.forEach(h => {
+    const key = h.r+'|'+h.h;
+    const hs = byHoleReal[key];
+    if (!hs || !hs.length) return;
+    let lastKnownRem = null;
+    let entry = null, entryIdx = -1;
+    hs.forEach((s, i) => {
+      const startDist = (i === 0) ? h.dm : lastKnownRem;
+      if (entry === null && s.cl !== 'Putter' && startDist !== null && startDist !== undefined
+          && startDist > APP_THRESHOLD_M && startDist <= 100){
+        entry = s; entryIdx = i;
+      }
+      if (s.rem !== null && s.rem !== undefined) lastKnownRem = s.rem;
+    });
+    if (entry === null) return;
+    const realStrokes = hs.length - entryIdx;
+    const penaltyStrokes = (byHoleAll[key]||[]).filter(s => s.et === 'penalty' && s.sn > entry.sn).length;
+    let sg = 0;
+    for (let i = entryIdx; i < hs.length; i++){
+      if (hs[i].sg !== null && hs[i].sg !== undefined) sg += hs[i].sg;
+    }
+    results.push({ y: YEAR_BY_IDX[h.r], strokes: realStrokes + penaltyStrokes, sg });
+  });
+  return results;
+}
+
 const KPI_DEFS = [
   {
     key:'gir', label:'% GIR', cssVar:'--tee', higherIsBetter:true, unit:'pct',
@@ -5919,6 +5984,28 @@ const KPI_DEFS = [
       return m;
     },
   },
+  {
+    // Ver la nota larga junto a computeWedgeAttackEntries para la definición
+    // completa (banda 45.72-100m, primer golpe de cada hoyo, conteo inclusive).
+    // Una ocasión por hoyo (no por golpe ni por ronda) -- un hoyo sin ningún
+    // golpe en la banda simplemente no aporta observación ese hoyo.
+    key:'wedgeAttackStrokes', label:'Golpes para acabar, ataque con wedge (45-100m)', cssVar:'--approach', higherIsBetter:false, unit:'strokes',
+    obsByYear(holes, shots){
+      const entries = computeWedgeAttackEntries(holes, shots);
+      const m = {};
+      entries.forEach(e => { (m[e.y]=m[e.y]||[]).push(e.strokes); });
+      return m;
+    },
+  },
+  {
+    key:'wedgeAttackSg', label:'SG desde ataque con wedge (45-100m)', cssVar:'--short', higherIsBetter:true, unit:'sgSigned',
+    obsByYear(holes, shots){
+      const entries = computeWedgeAttackEntries(holes, shots);
+      const m = {};
+      entries.forEach(e => { (m[e.y]=m[e.y]||[]).push(e.sg); });
+      return m;
+    },
+  },
 ];
 // Nota: el KPI "Fallo de green en approach" (basado en edge_offset) que
 // ocupaba este último slot se retiró a petición de Pau -- generalizar una
@@ -5933,6 +6020,7 @@ function kpiFmtValue(def, v){
   if (v===null || v===undefined || Number.isNaN(v)) return '—';
   if (def.unit === 'm') return fmtPlain(v,1)+'m';
   if (def.unit === 'sgSigned') return fmtSigned(v,2);
+  if (def.unit === 'strokes') return fmtPlain(v,1);
   return fmtPlain(v,0)+'%';
 }
 function kpiCalc(def, holes, shots){
