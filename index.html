@@ -253,7 +253,7 @@
   }
   .kpi-value.up { color: var(--good); }
   .kpi-value.down { color: var(--critical); }
-  .kpi-chart-wrap { position: relative; margin-top: 8px; }
+  .kpi-chart-wrap { position: relative; margin-top: 8px; overflow: hidden; }
   .kpi-tooltip { font-size: 11.5px; padding: 7px 9px; white-space: nowrap; }
   #kpiGrid .kpi-card:last-child { grid-column: 1 / -1; }
 
@@ -696,7 +696,12 @@
     z-index: 5;
     box-shadow: 0 6px 18px rgba(0,0,0,0.18);
   }
-  .chart-wrap { position: relative; }
+  .chart-wrap { position: relative; overflow: hidden; }
+  /* Zoom con rueda del ratón (ver initChartWheelZoom en dashboard-es.js):
+     el cursor cambia a lupa para indicar que el gráfico es zoomable, y el
+     wrap recorta el <svg> cuando su transform lo agranda más allá de su
+     tamaño natural. */
+  .chart-wrap, .kpi-chart-wrap { cursor: zoom-in; }
   .chart-empty {
     display: flex; align-items: center; justify-content: center;
     height: 220px; color: var(--muted); font-size: 13.5px; text-align: center; padding: 0 40px;
@@ -1151,6 +1156,9 @@
           <button class="seg-btn active" data-window="5">5 rondas</button>
           <button class="seg-btn" data-window="10">10 rondas</button>
         </div>
+        <div class="seg-control" id="sgLastRoundToggleWrap">
+          <button class="seg-btn" id="sgLastRoundToggle" type="button" data-active="false">★ Última ronda</button>
+        </div>
         <span class="win-note" id="sgModeCaveat"></span>
       </div>
       <div class="chart-wrap" id="sgChartWrap">
@@ -1185,6 +1193,9 @@
           <button class="seg-btn" data-window="3">3 rondas</button>
           <button class="seg-btn active" data-window="5">5 rondas</button>
           <button class="seg-btn" data-window="10">10 rondas</button>
+        </div>
+        <div class="seg-control" id="kpiLastRoundToggleWrap">
+          <button class="seg-btn" id="kpiLastRoundToggle" type="button" data-active="false">★ Última ronda</button>
         </div>
         <span class="win-note" id="kpiCaveat"></span>
       </div>
@@ -1238,12 +1249,12 @@
           <div class="kpi-chart-wrap"><svg class="kpi-chart" id="kpiChart-cataSgRound" viewBox="0 0 320 170" style="overflow:visible;display:block"></svg><div class="chart-tooltip kpi-tooltip" id="kpiTooltip-cataSgRound"></div></div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-head"><span class="kpi-label">Golpes para acabar, ataque con wedge (45-100m)<span class="tip-trigger" tabindex="0"><span class="info-dot">i</span><span class="info-tooltip">Por cada hoyo, se localiza el primer golpe (que no sea putt) cuya distancia de inicio cae entre 45.72m y 100m — el mismo corte Approach/Short Game que usa el resto del dashboard como límite inferior — y se cuentan los golpes desde ahí (inclusive) hasta acabar el hoyo, incluida cualquier penalización posterior. Un approach largo que se quede cerca del hoyo, o un chip corto con wedge desde &lt;45.72m, no generan ocasión: solo cuenta cuando el golpe que ataca el green nace ya dentro de esa banda.</span></span></span><span class="kpi-value" id="kpiVal-wedgeAttackStrokes">—</span></div>
+          <div class="kpi-head"><span class="kpi-label">Golpes para acabar, ataque con wedge (45-100m)<span class="tip-trigger" tabindex="0"><span class="info-dot">i</span><span class="info-tooltip">Por cada hoyo, se localiza el primer golpe (que no sea putt) cuya distancia de inicio cae entre 45.72m y 100m — el mismo corte Approach/Short Game que usa el resto del dashboard como límite inferior — y se cuentan los golpes desde ahí (inclusive) hasta acabar el hoyo, incluida cualquier penalización posterior. Un approach largo que se quede cerca del hoyo, o un chip corto con wedge desde &lt;45.72m, no generan ocasión: solo cuenta cuando el golpe que ataca el green nace ya dentro de esa banda. Pasa el ratón sobre la gráfica para ver también el SG de ese mismo tramo.</span></span></span><span class="kpi-value" id="kpiVal-wedgeAttackStrokes">—</span></div>
           <div class="kpi-chart-wrap"><svg class="kpi-chart" id="kpiChart-wedgeAttackStrokes" viewBox="0 0 320 170" style="overflow:visible;display:block"></svg><div class="chart-tooltip kpi-tooltip" id="kpiTooltip-wedgeAttackStrokes"></div></div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-head"><span class="kpi-label">SG desde ataque con wedge (45-100m)<span class="tip-trigger" tabindex="0"><span class="info-dot">i</span><span class="info-tooltip">Misma ocasión que "Golpes para acabar, ataque con wedge" (ver su tooltip para la definición completa), pero en SG en vez de golpes brutos: suma del strokes gained de todos los golpes desde el ataque con wedge (inclusive) hasta acabar el hoyo. Más cercano a 0 o positivo es mejor.</span></span></span><span class="kpi-value" id="kpiVal-wedgeAttackSg">—</span></div>
-          <div class="kpi-chart-wrap"><svg class="kpi-chart" id="kpiChart-wedgeAttackSg" viewBox="0 0 320 170" style="overflow:visible;display:block"></svg><div class="chart-tooltip kpi-tooltip" id="kpiTooltip-wedgeAttackSg"></div></div>
+          <div class="kpi-head"><span class="kpi-label">SG de golpes con wedge (40-120m)<span class="tip-trigger" tabindex="0"><span class="info-dot">i</span><span class="info-tooltip">A diferencia de "Golpes para acabar" (que solo mira el primer golpe de cada hoyo dentro de su banda), aquí cuenta CUALQUIER golpe cuyo palo sea un wedge (Pitching Wedge o cualquiera de grado — 49°/50°/53°/55°/60°) con distancia de inicio entre 40 y 120m, una observación por golpe. Al filtrar por palo en vez de por categoría de distancia, no hay riesgo de mezclar hierros largos aunque la banda sea más ancha — mide específicamente qué tal se ejecuta el wedge, no el resultado del hoyo.</span></span></span><span class="kpi-value" id="kpiVal-wedgeBandSg">—</span></div>
+          <div class="kpi-chart-wrap"><svg class="kpi-chart" id="kpiChart-wedgeBandSg" viewBox="0 0 320 170" style="overflow:visible;display:block"></svg><div class="chart-tooltip kpi-tooltip" id="kpiTooltip-wedgeBandSg"></div></div>
         </div>
         <div class="kpi-card">
           <div class="kpi-head"><span class="kpi-label">Resultado neto vs par, por tipo de hoyo<span class="tip-trigger" tabindex="0"><span class="info-dot">i</span><span class="info-tooltip">Tres líneas superpuestas (Par 3/4/5) con el resultado neto medio (golpes por encima/debajo de par, ya descontados los golpes de hándicap) para ese tipo de hoyo. El modo anual muestra en su lugar barras agrupadas (Año A en gris, Año B en color), con el mismo marcador de significancia (&#9679;) que el resto del dashboard.</span></span></span></div>
@@ -1283,6 +1294,9 @@
           <button class="seg-btn" data-metric="made">% embocados</button>
           <button class="seg-btn" data-metric="leave">Proximidad media</button>
         </div>
+        <div class="seg-control" id="puttLastRoundToggleWrap">
+          <button class="seg-btn" id="puttLastRoundToggle" type="button" data-active="false">★ Última ronda</button>
+        </div>
         <span class="win-note" id="puttModeCaveat"></span>
         <span class="tip-trigger" tabindex="0"><span class="info-dot">i</span><span class="info-tooltip"><b>Aviso de calidad de datos:</b> Shot Scope detecta la distancia de los putts con notablemente menos precisión que en golpes largos, y las correcciones manuales tras cada ronda a veces se hacen a ojo (sin estar seguro entre, digamos, 2 y 3 metros). Eso puede mover algunos putts entre tramos vecinos — trata la cifra exacta de un tramo con algo menos de confianza que el patrón agregado.</span></span>
       </div>
@@ -1308,6 +1322,9 @@
           <button class="seg-btn" data-window="3">3 rondas</button>
           <button class="seg-btn active" data-window="5">5 rondas</button>
           <button class="seg-btn" data-window="10">10 rondas</button>
+        </div>
+        <div class="seg-control" id="threeputtCauseLastRoundToggleWrap">
+          <button class="seg-btn" id="threeputtCauseLastRoundToggle" type="button" data-active="false">★ Última ronda</button>
         </div>
         <span class="win-note" id="threeputtCauseCaveat"></span>
       </div>
@@ -1336,9 +1353,8 @@
           <button class="seg-btn active" data-window="5">5 rondas</button>
           <button class="seg-btn" data-window="10">10 rondas</button>
         </div>
-        <div class="seg-control" id="errMetricControl">
-          <button class="seg-btn active" data-metric="count">Veces por ronda</button>
-          <button class="seg-btn" data-metric="pct">% de aparición</button>
+        <div class="seg-control" id="errLastRoundToggleWrap">
+          <button class="seg-btn" id="errLastRoundToggle" type="button" data-active="false">★ Última ronda</button>
         </div>
         <span class="win-note" id="errModeCaveat"></span>
       </div>
@@ -1552,6 +1568,7 @@
     <div class="card">
       <div class="controls-row" style="margin-bottom:14px">
         <div class="seg-control" id="clubConsistencyWindowControl">
+          <button class="seg-btn" data-window="recent1">Última ronda</button>
           <button class="seg-btn" data-window="recent3">Últimas 3</button>
           <button class="seg-btn" data-window="recent5">Últimas 5</button>
           <button class="seg-btn active" data-window="recent10">Últimas 10</button>
@@ -1592,6 +1609,7 @@
     <div class="card">
       <div class="controls-row" style="margin-bottom:14px">
         <div class="seg-control" id="clubPerfWindowControl">
+          <button class="seg-btn" data-window="recent1">Última ronda</button>
           <button class="seg-btn" data-window="recent3">Últimas 3</button>
           <button class="seg-btn" data-window="recent5">Últimas 5</button>
           <button class="seg-btn active" data-window="recent10">Últimas 10</button>
@@ -1669,6 +1687,7 @@
     <div class="card">
       <div class="controls-row" style="margin-bottom:14px">
         <div class="seg-control" id="clubBestShotsWindowControl">
+          <button class="seg-btn" data-window="recent1">Última ronda</button>
           <button class="seg-btn" data-window="recent3">Últimas 3</button>
           <button class="seg-btn" data-window="recent5">Últimas 5</button>
           <button class="seg-btn" data-window="recent10">Últimas 10</button>
@@ -2088,6 +2107,10 @@ function fmtToPar(v, d=0){ if (v===null||v===undefined||Number.isNaN(v)) return 
 // hyphenate/soft-break at, so it stays on one line and only the whitespace
 // before "· Hoyo N" is a wrap point.
 function fmtDateShort(d){ if (!d) return '—'; const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d); if (!m) return d; return `${m[3]}/${m[2]}/${m[1].slice(2)}`; }
+// Etiqueta "fecha · campo" para el overlay ★ Última ronda -- usada en el
+// texto de todos sus tooltips (Pau pidió ver también el campo, no solo la
+// fecha, igual que ya se ve en otras partes del dashboard con roundLabel).
+function lastRoundOverlayLabel(r){ return `${r.d} · ${r.c}`; }
 
 // ============================================================
 // Generic sortable-table headers
@@ -2253,6 +2276,28 @@ function svgEl(tag, attrs){
   const e = document.createElementNS(ns, tag);
   for (const k in attrs) e.setAttribute(k, attrs[k]);
   return e;
+}
+
+// Agrupa el contenido de "datos" de un gráfico (líneas, puntos, overlay de
+// última ronda, elementos de hover) en un <g> recortado a un rectángulo --
+// necesario desde que el zoom de ejes puede dejar un segmento de línea o el
+// overlay de estrella fuera del sub-rango visible, que de otro modo se
+// dibujaría por encima de las etiquetas de los ejes (fuera del área de
+// trazado pero dentro del lienzo SVG, que solo el CONTENEDOR recorta con
+// overflow:hidden, no el margen de ejes en sí). Las etiquetas/cuadrícula de
+// los ejes se añaden ANTES de llamar a esto, directamente al <svg>, y
+// quedan fuera del grupo -- nunca se recortan. El id del <clipPath> se
+// genera con un contador global porque puede haber varios gráficos en la
+// misma página a la vez y los id deben ser únicos en todo el documento.
+let __plotClipCounter = 0;
+function clipToPlotArea(svg, x, y, width, height){
+  const id = 'plotClip' + (__plotClipCounter++);
+  const clipPath = svgEl('clipPath', {id});
+  clipPath.appendChild(svgEl('rect', {x, y, width, height}));
+  svg.appendChild(clipPath);
+  const g = svgEl('g', {'clip-path': `url(#${id})`});
+  svg.appendChild(g);
+  return g;
 }
 
 // ============================================================
@@ -2453,6 +2498,7 @@ function computeTwoGroupStat(itemsA, itemsB, extractor){
 function clearChartEmpty(wrapEl, svgEl_, legendEl, msg){
   svgEl_.innerHTML = '';
   legendEl.innerHTML = '';
+  svgEl_.__zoomInfo = null; // sin datos que dibujar -- invalida cualquier zoom pendiente de la rueda del ratón
   let empty = wrapEl.querySelector('.chart-empty');
   if (!empty) { empty = document.createElement('div'); empty.className='chart-empty'; wrapEl.appendChild(empty); }
   empty.textContent = msg;
@@ -2466,8 +2512,8 @@ function showChart(wrapEl, svgEl_){
 }
 
 function drawLineChart(opts){
-  // opts: {svg, legend, tooltip, wrap, periods, series, isMonthly, fmtVal, yClamp:{min,max}}
-  const {svg, legend, tooltip, wrap, periods, series, isMonthly, fmtVal, yClamp} = opts;
+  // opts: {svg, legend, tooltip, wrap, periods, series, isMonthly, fmtVal, yClamp:{min,max}, lastRoundOverlay:{enabled,roundLabel,valuesByKey}}
+  const {svg, legend, tooltip, wrap, periods, series, isMonthly, fmtVal, yClamp, lastRoundOverlay} = opts;
   if (!periods.length) { clearChartEmpty(wrap, svg, legend, 'No hay rondas en esta selección.'); return; }
   showChart(wrap, svg);
   svg.innerHTML = ''; legend.innerHTML = '';
@@ -2479,40 +2525,101 @@ function drawLineChart(opts){
 
   let allVals = [];
   periods.forEach(p => series.forEach(s => { const v = p.values[s.key]; if (v!==null && v!==undefined && !Number.isNaN(v)) allVals.push(v); }));
+  // El valor bruto de la última ronda (overlay) puede caer fuera del rango de
+  // las medias ya dibujadas -- se incluye aquí para que el eje Y se ajuste y
+  // la estrella nunca quede recortada fuera del área visible.
+  if (lastRoundOverlay && lastRoundOverlay.enabled) {
+    series.forEach(s => { const v = lastRoundOverlay.valuesByKey[s.key]; if (v!==null && v!==undefined && !Number.isNaN(v)) allVals.push(v); });
+  }
   if (!allVals.length) allVals = [0];
-  const step = niceStep(Math.max(...allVals,0) - Math.min(...allVals,0) || 1);
-  let yMin = Math.floor((Math.min(...allVals,0) - step*0.6)/step)*step;
-  let yMax = Math.ceil((Math.max(...allVals,0) + step*0.6)/step)*step;
-  if (yClamp) { yMin = Math.max(yMin, yClamp.min); yMax = Math.min(yMax, yClamp.max); }
+  const padStep = niceStep(Math.max(...allVals,0) - Math.min(...allVals,0) || 1);
+  let fullYMin = Math.floor((Math.min(...allVals,0) - padStep*0.6)/padStep)*padStep;
+  let fullYMax = Math.ceil((Math.max(...allVals,0) + padStep*0.6)/padStep)*padStep;
+  if (yClamp) { fullYMin = Math.max(fullYMin, yClamp.min); fullYMax = Math.min(fullYMax, yClamp.max); }
+  // Zoom con rueda del ratón (ver initChartAxisZoom): opts.zoomY, cuando está
+  // presente, sustituye el rango Y calculado de los datos por un sub-rango
+  // -- los ejes y su cuadrícula se recalculan de verdad para ese sub-rango
+  // (no es un zoom visual/CSS), igual que el resto del gráfico.
+  let yMin = fullYMin, yMax = fullYMax;
+  if (opts.zoomY) {
+    yMin = Math.max(fullYMin, opts.zoomY.min);
+    yMax = Math.min(fullYMax, opts.zoomY.max);
+    if (!(yMax > yMin)) { yMin = fullYMin; yMax = fullYMax; }
+  }
+  const gridStep = niceStep(yMax - yMin || 1);
 
-  function xAt(i){ return n===1 ? padL+plotW/2 : padL + (i/(n-1)) * plotW; }
+  // Zoom horizontal (eje X, índice de periodo): opts.zoomX, análogo a
+  // zoomY -- sustituye el rango de índices [0, n-1] mostrado por un
+  // sub-rango continuo; los periodos fuera de ese sub-rango caen fuera
+  // del área de dibujo (recortados por overflow:hidden en el wrap, igual
+  // que con el zoom vertical).
+  const fullXMin = 0, fullXMax = Math.max(1, n-1);
+  let xMin = fullXMin, xMax = fullXMax;
+  if (opts.zoomX) {
+    xMin = Math.max(fullXMin, opts.zoomX.min);
+    xMax = Math.min(fullXMax, opts.zoomX.max);
+    if (!(xMax > xMin)) { xMin = fullXMin; xMax = fullXMax; }
+  }
+  function xAt(i){ return n===1 ? padL+plotW/2 : padL + ((i - xMin)/(xMax - xMin)) * plotW; }
   function yAt(v){ return padT + plotH - ((v - yMin)/(yMax - yMin)) * plotH; }
 
-  for (let v = yMin; v <= yMax + 1e-9; v += step) {
+  for (let v = Math.ceil(yMin/gridStep)*gridStep; v <= yMax + 1e-9; v += gridStep) {
     const y = yAt(v);
     svg.appendChild(svgEl('line', {x1:padL, x2:padL+plotW, y1:y, y2:y, class: Math.abs(v)<1e-9 ? 'zero-line':'gridline'}));
     const t = svgEl('text', {x: padL - 8, y: y+3, class:'axis-label', 'text-anchor':'end'});
     t.textContent = fmtVal(v);
     svg.appendChild(t);
   }
+  svg.__zoomInfo = {kind:'y', W, H, padT, plotH, padL, plotW, yMin, yMax, fullMin:fullYMin, fullMax:fullYMax,
+    xMin, xMax, fullXMin, fullXMax,
+    redraw:(zoom)=>drawLineChart({...opts, zoomY: zoom && zoom.zoomY, zoomX: zoom && zoom.zoomX})};
 
+  const isXZoomed = n > 1 && (xMin > fullXMin + 1e-9 || xMax < fullXMax - 1e-9);
   let tickIdxs;
-  if (isMonthly) {
-    tickIdxs = periods.map((_,i)=>i).filter(i => i % 2 === 0);
-    if (tickIdxs.length === 0 || tickIdxs[tickIdxs.length-1] !== n-1) {
-      if (tickIdxs.length && n-1 - tickIdxs[tickIdxs.length-1] < 2) tickIdxs[tickIdxs.length-1] = n-1;
-      else tickIdxs.push(n-1);
+  if (isXZoomed) {
+    const visLo = Math.max(0, Math.ceil(xMin - 1e-9));
+    const visHi = Math.min(n-1, Math.floor(xMax + 1e-9));
+    if (visHi <= visLo) {
+      tickIdxs = [visLo];
+    } else if (isMonthly) {
+      const step = Math.max(1, Math.round((visHi - visLo) / 6));
+      tickIdxs = [];
+      for (let i = visLo; i < visHi; i += step) tickIdxs.push(i);
+      tickIdxs.push(visHi);
+    } else if (visHi - visLo >= 2) {
+      tickIdxs = [visLo, Math.round((visLo+visHi)/2), visHi];
+    } else {
+      tickIdxs = [visLo, visHi];
     }
-  } else if (n > 1) {
-    tickIdxs = [0, Math.floor((n-1)/2), n-1];
+    tickIdxs.forEach(i => {
+      const t = svgEl('text', {x:xAt(i), y:H-8, class:'axis-label', 'text-anchor': i===tickIdxs[0]?'start':(i===tickIdxs[tickIdxs.length-1]?'end':'middle')});
+      t.textContent = isMonthly ? periods[i].label : periods[i].label.slice(0,7);
+      svg.appendChild(t);
+    });
   } else {
-    tickIdxs = [0];
+    if (isMonthly) {
+      tickIdxs = periods.map((_,i)=>i).filter(i => i % 2 === 0);
+      if (tickIdxs.length === 0 || tickIdxs[tickIdxs.length-1] !== n-1) {
+        if (tickIdxs.length && n-1 - tickIdxs[tickIdxs.length-1] < 2) tickIdxs[tickIdxs.length-1] = n-1;
+        else tickIdxs.push(n-1);
+      }
+    } else if (n > 1) {
+      tickIdxs = [0, Math.floor((n-1)/2), n-1];
+    } else {
+      tickIdxs = [0];
+    }
+    tickIdxs.forEach(i => {
+      const t = svgEl('text', {x:xAt(i), y:H-8, class:'axis-label', 'text-anchor': i===0?'start':(i===n-1?'end':'middle')});
+      t.textContent = isMonthly ? periods[i].label : periods[i].label.slice(0,7);
+      svg.appendChild(t);
+    });
   }
-  tickIdxs.forEach(i => {
-    const t = svgEl('text', {x:xAt(i), y:H-8, class:'axis-label', 'text-anchor': i===0?'start':(i===n-1?'end':'middle')});
-    t.textContent = isMonthly ? periods[i].label : periods[i].label.slice(0,7);
-    svg.appendChild(t);
-  });
+
+  // Todo lo que sigue (líneas, puntos, overlay de última ronda, hover) va
+  // dentro de un grupo recortado al área de trazado -- ver nota en
+  // clipToPlotArea. Las etiquetas/cuadrícula de eje de arriba quedan fuera,
+  // sin recortar.
+  const plotG = clipToPlotArea(svg, padL, 0, W - padL, padT + plotH);
 
   const pointsBySeries = {};
   const endLabels = [];
@@ -2524,20 +2631,20 @@ function drawLineChart(opts){
     pointsBySeries[s.key] = pts;
     let d = '', started = false;
     pts.forEach(pt => { if (pt===null) { started=false; return; } d += (started?' L ':'M ') + pt[0]+' '+pt[1]; started=true; });
-    if (d) svg.appendChild(svgEl('path', {d, fill:'none', stroke:`var(${s.cssVar})`, 'stroke-width':2, 'stroke-linecap':'round', 'stroke-linejoin':'round'}));
+    if (d) plotG.appendChild(svgEl('path', {d, fill:'none', stroke:`var(${s.cssVar})`, 'stroke-width':2, 'stroke-linecap':'round', 'stroke-linejoin':'round'}));
 
     if (isMonthly) {
       pts.forEach((pt, i) => {
         if (pt===null) return;
         const r = 2 + Math.min(periods[i].rounds.length, 6) * 0.35;
-        svg.appendChild(svgEl('circle', {cx:pt[0], cy:pt[1], r:r.toFixed(1), fill:`var(${s.cssVar})`, opacity:0.9}));
+        plotG.appendChild(svgEl('circle', {cx:pt[0], cy:pt[1], r:r.toFixed(1), fill:`var(${s.cssVar})`, opacity:0.9}));
       });
     }
 
     let lastPt = null;
     for (let i = pts.length-1; i>=0; i--) { if (pts[i]!==null) { lastPt = pts[i]; break; } }
     if (lastPt) {
-      svg.appendChild(svgEl('circle', {cx:lastPt[0], cy:lastPt[1], r:3.2, fill:`var(${s.cssVar})`}));
+      plotG.appendChild(svgEl('circle', {cx:lastPt[0], cy:lastPt[1], r:3.2, fill:`var(${s.cssVar})`}));
       endLabels.push({s, pt: lastPt, y: lastPt[1]});
     }
   });
@@ -2552,18 +2659,18 @@ function drawLineChart(opts){
     const lbl = svgEl('text', {x: pt[0]+8, y: y+4, class:'axis-label', 'font-weight':600});
     lbl.textContent = s.label;
     lbl.style.fill = `var(${s.cssVar})`;
-    svg.appendChild(lbl);
+    plotG.appendChild(lbl);
   });
 
   const hoverLine = svgEl('line', {x1:0,x2:0,y1:padT,y2:padT+plotH, stroke:'var(--border-strong)', 'stroke-width':1, opacity:0});
-  svg.appendChild(hoverLine);
+  plotG.appendChild(hoverLine);
   const hoverDots = series.map(s => {
     const d = svgEl('circle', {r:4, fill:`var(${s.cssVar})`, stroke:'var(--surface)', 'stroke-width':1.5, opacity:0});
-    svg.appendChild(d);
+    plotG.appendChild(d);
     return d;
   });
   const hitArea = svgEl('rect', {x:padL, y:padT, width:plotW, height:plotH, fill:'transparent'});
-  svg.appendChild(hitArea);
+  plotG.appendChild(hitArea);
 
   function showAt(i){
     hoverLine.setAttribute('x1', xAt(i)); hoverLine.setAttribute('x2', xAt(i)); hoverLine.setAttribute('opacity', 1);
@@ -2580,9 +2687,7 @@ function drawLineChart(opts){
     tooltip.innerHTML = html;
     tooltip.style.opacity = 1;
     const wrapRect = wrap.getBoundingClientRect();
-    let left = xAt(i)/W * wrapRect.width + 14;
-    if (left > wrapRect.width - 170) left = xAt(i)/W * wrapRect.width - 170;
-    tooltip.style.left = left + 'px';
+    tooltip.style.left = clampTooltipLeft(tooltip, wrapRect, xAt(i)/W * wrapRect.width) + 'px';
     tooltip.style.top = (yAt(0)/H * wrapRect.height) - 60 + 'px';
   }
   function hide(){ hoverLine.setAttribute('opacity', 0); hoverDots.forEach(d=>d.setAttribute('opacity',0)); tooltip.style.opacity = 0; }
@@ -2590,11 +2695,42 @@ function drawLineChart(opts){
     const rect = svg.getBoundingClientRect();
     const xFrac = (e.clientX - rect.left) / rect.width;
     const xSvg = xFrac * W;
-    let i = Math.round(((xSvg - padL)/plotW) * (n-1));
+    let i = Math.round(xMin + ((xSvg - padL)/plotW) * (xMax - xMin));
     i = Math.max(0, Math.min(n-1, i));
     showAt(i);
   });
   hitArea.addEventListener('mouseleave', hide);
+
+  // "Última ronda" overlay: el valor BRUTO (sin promediar) de la ronda más
+  // reciente, pintado como una estrella -- distinta a los círculos normales
+  // de la media móvil/mes -- en el mismo eje X que el último punto ya
+  // dibujado, para comparar visualmente la ronda suelta contra la tendencia
+  // de fondo sin montar un segundo gráfico. Activable con su propio botón
+  // (ver sgShowLastRound/kpiShowLastRound), no forma parte del modo de vista.
+  if (lastRoundOverlay && lastRoundOverlay.enabled) {
+    const xOv = xAt(n-1);
+    series.forEach(s => {
+      const v = lastRoundOverlay.valuesByKey[s.key];
+      if (v===null || v===undefined || Number.isNaN(v)) return;
+      const yOv = yAt(v);
+      const halo = svgEl('text', {x:xOv, y:yOv+5.5, 'text-anchor':'middle', 'font-size':16, stroke:'var(--surface)', 'stroke-width':4, 'stroke-linejoin':'round'});
+      halo.textContent = '★';
+      plotG.appendChild(halo);
+      const star = svgEl('text', {x:xOv, y:yOv+5.5, 'text-anchor':'middle', 'font-size':16, fill:`var(${s.cssVar})`});
+      star.textContent = '★';
+      star.style.cursor = 'pointer';
+      plotG.appendChild(star);
+      const showStarTooltip = () => {
+        tooltip.innerHTML = `<div style="opacity:0.7;margin-bottom:4px">★ Última ronda: ${lastRoundOverlay.roundLabel}</div><div><span style="color:var(${s.cssVar})">★</span> ${s.label}: ${fmtVal(v)}</div>`;
+        tooltip.style.opacity = 1;
+        const wrapRect = wrap.getBoundingClientRect();
+        tooltip.style.left = clampTooltipLeft(tooltip, wrapRect, xOv/W * wrapRect.width) + 'px';
+        tooltip.style.top = (yOv/H * wrapRect.height) - 60 + 'px';
+      };
+      star.addEventListener('mouseenter', showStarTooltip);
+      star.addEventListener('mouseleave', () => { tooltip.style.opacity = 0; });
+    });
+  }
 
   series.forEach(s => {
     const item = document.createElement('div');
@@ -2735,9 +2871,7 @@ function drawDualAxisLineChart(opts){
     tooltip.innerHTML = html;
     tooltip.style.opacity = 1;
     const wrapRect = wrap.getBoundingClientRect();
-    let left = xAt(i)/W * wrapRect.width + 14;
-    if (left > wrapRect.width - 170) left = xAt(i)/W * wrapRect.width - 170;
-    tooltip.style.left = left + 'px';
+    tooltip.style.left = clampTooltipLeft(tooltip, wrapRect, xAt(i)/W * wrapRect.width) + 'px';
     tooltip.style.top = (yAtLeft(0)/H * wrapRect.height) - 60 + 'px';
   }
   function hide(){ hoverLine.setAttribute('opacity', 0); hoverDots.forEach(d=>d.setAttribute('opacity',0)); tooltip.style.opacity = 0; }
@@ -2771,8 +2905,8 @@ function drawDualAxisLineChart(opts){
 // vez).
 // ============================================================
 function drawStackedAreaChart(opts){
-  // opts: {svg, legend, tooltip, wrap, periods, series, isMonthly, fmtVal}
-  const {svg, legend, tooltip, wrap, periods, series, isMonthly, fmtVal} = opts;
+  // opts: {svg, legend, tooltip, wrap, periods, series, isMonthly, fmtVal, lastRoundOverlay:{enabled,roundLabel,valuesByKey}}
+  const {svg, legend, tooltip, wrap, periods, series, isMonthly, fmtVal, lastRoundOverlay} = opts;
   if (!periods.length) { clearChartEmpty(wrap, svg, legend, 'No hay rondas en esta selección.'); return; }
   showChart(wrap, svg);
   svg.innerHTML = ''; legend.innerHTML = '';
@@ -2782,34 +2916,82 @@ function drawStackedAreaChart(opts){
   const plotW = W - padL - padR, plotH = H - padT - padB;
   const n = periods.length;
 
-  function xAt(i){ return n===1 ? padL+plotW/2 : padL + (i/(n-1)) * plotW; }
-  function yAt(v){ return padT + plotH - (v/100) * plotH; }
-
-  [0,20,40,60,80,100].forEach(v => {
-    const y = yAt(v);
-    svg.appendChild(svgEl('line', {x1:padL, x2:padL+plotW, y1:y, y2:y, class: v===0 ? 'zero-line':'gridline'}));
-    const t = svgEl('text', {x: padL - 8, y: y+3, class:'axis-label', 'text-anchor':'end'});
-    t.textContent = v+'%';
-    svg.appendChild(t);
-  });
-
-  let tickIdxs;
-  if (isMonthly) {
-    tickIdxs = periods.map((_,i)=>i).filter(i => i % 2 === 0);
-    if (tickIdxs.length === 0 || tickIdxs[tickIdxs.length-1] !== n-1) {
-      if (tickIdxs.length && n-1 - tickIdxs[tickIdxs.length-1] < 2) tickIdxs[tickIdxs.length-1] = n-1;
-      else tickIdxs.push(n-1);
-    }
-  } else if (n > 1) {
-    tickIdxs = [0, Math.floor((n-1)/2), n-1];
-  } else {
-    tickIdxs = [0];
+  // Eje Y fijo 0-100% por naturaleza (dos series que suman siempre el
+  // total) -- el zoom (opts.zoomY) permite ver un tramo más estrecho, p.ej.
+  // 40-60%, con su propia cuadrícula recalculada, en vez de forzar siempre
+  // los 6 saltos fijos de 20 en 20.
+  const fullYMin = 0, fullYMax = 100;
+  let yMin = fullYMin, yMax = fullYMax;
+  if (opts.zoomY) {
+    yMin = Math.max(fullYMin, opts.zoomY.min);
+    yMax = Math.min(fullYMax, opts.zoomY.max);
+    if (!(yMax > yMin)) { yMin = fullYMin; yMax = fullYMax; }
   }
-  tickIdxs.forEach(i => {
-    const t = svgEl('text', {x:xAt(i), y:H-8, class:'axis-label', 'text-anchor': i===0?'start':(i===n-1?'end':'middle')});
-    t.textContent = isMonthly ? periods[i].label : periods[i].label.slice(0,7);
+  const gridStep = niceStep(yMax - yMin || 1);
+
+  // Zoom horizontal (eje X, índice de periodo): ver nota equivalente en
+  // drawLineChart.
+  const fullXMin = 0, fullXMax = Math.max(1, n-1);
+  let xMin = fullXMin, xMax = fullXMax;
+  if (opts.zoomX) {
+    xMin = Math.max(fullXMin, opts.zoomX.min);
+    xMax = Math.min(fullXMax, opts.zoomX.max);
+    if (!(xMax > xMin)) { xMin = fullXMin; xMax = fullXMax; }
+  }
+  function xAt(i){ return n===1 ? padL+plotW/2 : padL + ((i - xMin)/(xMax - xMin)) * plotW; }
+  function yAt(v){ return padT + plotH - ((v-yMin)/(yMax-yMin)) * plotH; }
+
+  for (let v = Math.ceil(yMin/gridStep)*gridStep; v <= yMax + 1e-9; v += gridStep) {
+    const y = yAt(v);
+    svg.appendChild(svgEl('line', {x1:padL, x2:padL+plotW, y1:y, y2:y, class: Math.abs(v)<1e-9 ? 'zero-line':'gridline'}));
+    const t = svgEl('text', {x: padL - 8, y: y+3, class:'axis-label', 'text-anchor':'end'});
+    t.textContent = fmtPlain(v,0)+'%';
     svg.appendChild(t);
-  });
+  }
+  svg.__zoomInfo = {kind:'y', W, H, padT, plotH, padL, plotW, yMin, yMax, fullMin:fullYMin, fullMax:fullYMax,
+    xMin, xMax, fullXMin, fullXMax,
+    redraw:(zoom)=>drawStackedAreaChart({...opts, zoomY: zoom && zoom.zoomY, zoomX: zoom && zoom.zoomX})};
+
+  const isXZoomed = n > 1 && (xMin > fullXMin + 1e-9 || xMax < fullXMax - 1e-9);
+  let tickIdxs;
+  if (isXZoomed) {
+    const visLo = Math.max(0, Math.ceil(xMin - 1e-9));
+    const visHi = Math.min(n-1, Math.floor(xMax + 1e-9));
+    if (visHi <= visLo) {
+      tickIdxs = [visLo];
+    } else if (isMonthly) {
+      const step = Math.max(1, Math.round((visHi - visLo) / 6));
+      tickIdxs = [];
+      for (let i = visLo; i < visHi; i += step) tickIdxs.push(i);
+      tickIdxs.push(visHi);
+    } else if (visHi - visLo >= 2) {
+      tickIdxs = [visLo, Math.round((visLo+visHi)/2), visHi];
+    } else {
+      tickIdxs = [visLo, visHi];
+    }
+    tickIdxs.forEach(i => {
+      const t = svgEl('text', {x:xAt(i), y:H-8, class:'axis-label', 'text-anchor': i===tickIdxs[0]?'start':(i===tickIdxs[tickIdxs.length-1]?'end':'middle')});
+      t.textContent = isMonthly ? periods[i].label : periods[i].label.slice(0,7);
+      svg.appendChild(t);
+    });
+  } else {
+    if (isMonthly) {
+      tickIdxs = periods.map((_,i)=>i).filter(i => i % 2 === 0);
+      if (tickIdxs.length === 0 || tickIdxs[tickIdxs.length-1] !== n-1) {
+        if (tickIdxs.length && n-1 - tickIdxs[tickIdxs.length-1] < 2) tickIdxs[tickIdxs.length-1] = n-1;
+        else tickIdxs.push(n-1);
+      }
+    } else if (n > 1) {
+      tickIdxs = [0, Math.floor((n-1)/2), n-1];
+    } else {
+      tickIdxs = [0];
+    }
+    tickIdxs.forEach(i => {
+      const t = svgEl('text', {x:xAt(i), y:H-8, class:'axis-label', 'text-anchor': i===0?'start':(i===n-1?'end':'middle')});
+      t.textContent = isMonthly ? periods[i].label : periods[i].label.slice(0,7);
+      svg.appendChild(t);
+    });
+  }
 
   // acumulado [0, v1, v1+v2, ...] por periodo, o null si ese periodo no tiene datos
   const cum = periods.map(p => {
@@ -2833,6 +3015,10 @@ function drawStackedAreaChart(opts){
   }
   const runs = runsOfData();
 
+  // Todo lo que sigue va dentro de un grupo recortado al área de trazado --
+  // ver nota en clipToPlotArea.
+  const plotG = clipToPlotArea(svg, padL, 0, W - padL, padT + plotH);
+
   series.forEach((s, si) => {
     let d = '';
     runs.forEach(([i,j]) => {
@@ -2841,7 +3027,7 @@ function drawStackedAreaChart(opts){
       for (let k = j-1; k >= i; k--) path += ' L ' + xAt(k) + ' ' + yAt(cum[k][si]);
       d += path + ' Z ';
     });
-    if (d) svg.appendChild(svgEl('path', {d: d.trim(), fill:`var(${s.cssVar})`, opacity:0.82}));
+    if (d) plotG.appendChild(svgEl('path', {d: d.trim(), fill:`var(${s.cssVar})`, opacity:0.82}));
   });
   // línea divisoria nítida entre las dos series, encima del relleno -- ayuda a
   // leer con precisión el % exacto cuando el área sola lo hace difícil
@@ -2850,13 +3036,13 @@ function drawStackedAreaChart(opts){
     runs.forEach(([i,j]) => {
       for (let k = i; k < j; k++) d += (k===i?'M ':'L ') + xAt(k) + ' ' + yAt(cum[k][1]);
     });
-    if (d) svg.appendChild(svgEl('path', {d: d.trim(), fill:'none', stroke:'var(--surface)', 'stroke-width':2}));
+    if (d) plotG.appendChild(svgEl('path', {d: d.trim(), fill:'none', stroke:'var(--surface)', 'stroke-width':2}));
   }
 
   const hoverLine = svgEl('line', {x1:0,x2:0,y1:padT,y2:padT+plotH, stroke:'var(--border-strong)', 'stroke-width':1, opacity:0});
-  svg.appendChild(hoverLine);
+  plotG.appendChild(hoverLine);
   const hitArea = svgEl('rect', {x:padL, y:padT, width:plotW, height:plotH, fill:'transparent'});
-  svg.appendChild(hitArea);
+  plotG.appendChild(hitArea);
 
   function showAt(i){
     hoverLine.setAttribute('x1', xAt(i)); hoverLine.setAttribute('x2', xAt(i)); hoverLine.setAttribute('opacity', 1);
@@ -2875,9 +3061,7 @@ function drawStackedAreaChart(opts){
     tooltip.innerHTML = html;
     tooltip.style.opacity = 1;
     const wrapRect = wrap.getBoundingClientRect();
-    let left = xAt(i)/W * wrapRect.width + 14;
-    if (left > wrapRect.width - 170) left = xAt(i)/W * wrapRect.width - 170;
-    tooltip.style.left = left + 'px';
+    tooltip.style.left = clampTooltipLeft(tooltip, wrapRect, xAt(i)/W * wrapRect.width) + 'px';
     tooltip.style.top = (yAt(50)/H * wrapRect.height) - 60 + 'px';
   }
   function hide(){ hoverLine.setAttribute('opacity', 0); tooltip.style.opacity = 0; }
@@ -2885,11 +3069,44 @@ function drawStackedAreaChart(opts){
     const rect = svg.getBoundingClientRect();
     const xFrac = (e.clientX - rect.left) / rect.width;
     const xSvg = xFrac * W;
-    let i = Math.round(((xSvg - padL)/plotW) * (n-1));
+    let i = Math.round(xMin + ((xSvg - padL)/plotW) * (xMax - xMin));
     i = Math.max(0, Math.min(n-1, i));
     showAt(i);
   });
   hitArea.addEventListener('mouseleave', hide);
+
+  // "Última ronda" overlay: aquí no hay un valor por serie independiente como
+  // en drawLineChart -- las dos series suman 100%, así que se pinta UNA
+  // estrella en el punto de la frontera bruta de la última ronda (% primer
+  // putt de esa ronda en concreto), para comparar contra la línea divisoria
+  // ya dibujada de la tendencia suavizada. Si la última ronda no tuvo ningún
+  // hoyo de 3-putts+ (frecuente, ~2-3 por ronda de media sobre TODA la
+  // selección), no hay valor que pintar -- mismo criterio de hueco que ya
+  // usa el resto del gráfico.
+  if (lastRoundOverlay && lastRoundOverlay.enabled) {
+    const v = lastRoundOverlay.valuesByKey.first;
+    if (v!==null && v!==undefined && !Number.isNaN(v)) {
+      const xOv = xAt(n-1), yOv = yAt(v);
+      const halo = svgEl('text', {x:xOv, y:yOv+5, 'text-anchor':'middle', 'font-size':16, stroke:'var(--surface)', 'stroke-width':4, 'stroke-linejoin':'round'});
+      halo.textContent = '★';
+      plotG.appendChild(halo);
+      const star = svgEl('text', {x:xOv, y:yOv+5, 'text-anchor':'middle', 'font-size':16, fill:'var(--ink)'});
+      star.textContent = '★';
+      star.style.cursor = 'pointer';
+      plotG.appendChild(star);
+      star.addEventListener('mouseenter', () => {
+        tooltip.innerHTML = `<div style="opacity:0.7;margin-bottom:4px">★ Última ronda: ${lastRoundOverlay.roundLabel}</div>`
+          + `<div><span style="color:var(${series[0].cssVar})">●</span> ${series[0].label}: ${fmtVal(v)}</div>`
+          + `<div><span style="color:var(${series[1].cssVar})">●</span> ${series[1].label}: ${fmtVal(100-v)}</div>`
+          + `<div style="opacity:0.6;margin-top:2px">${lastRoundOverlay.n} hoyo${lastRoundOverlay.n===1?'':'s'} de 3-putts+ en esa ronda</div>`;
+        tooltip.style.opacity = 1;
+        const wrapRect = wrap.getBoundingClientRect();
+        tooltip.style.left = clampTooltipLeft(tooltip, wrapRect, xOv/W * wrapRect.width) + 'px';
+        tooltip.style.top = (yAt(50)/H * wrapRect.height) - 60 + 'px';
+      });
+      star.addEventListener('mouseleave', () => { tooltip.style.opacity = 0; });
+    }
+  }
 
   series.forEach(s => {
     const item = document.createElement('div');
@@ -2903,10 +3120,10 @@ function drawStackedAreaChart(opts){
 // Generic yearly grouped-bar chart with significance markers
 // ============================================================
 function drawYearlyBars(opts){
-  // opts: {svg, legend, tooltip, wrap, series, statsByKey, fmtVal, years, yClamp:{min,max}}
-  const {svg, legend, tooltip, wrap, series, statsByKey, fmtVal, years, yClamp} = opts;
+  // opts: {svg, legend, tooltip, wrap, series, statsByKey, fmtVal, years, yClamp:{min,max}, emptyMsg, legendNoteB}
+  const {svg, legend, tooltip, wrap, series, statsByKey, fmtVal, years, yClamp, emptyMsg, legendNoteB} = opts;
   const keys = series.filter(s => statsByKey[s.key]);
-  if (!keys.length) { clearChartEmpty(wrap, svg, legend, 'Esta comparación necesita rondas de dos años distintos en la selección.'); return; }
+  if (!keys.length) { clearChartEmpty(wrap, svg, legend, emptyMsg || 'Esta comparación necesita rondas de dos años distintos en la selección.'); return; }
   showChart(wrap, svg);
   svg.innerHTML = ''; legend.innerHTML = '';
 
@@ -2968,7 +3185,7 @@ function drawYearlyBars(opts){
     svg.appendChild(lbl);
   });
 
-  [{c:'var(--muted)', l:String(years[0])}, {c:'var(--tee)', l:years[1]+' (coloreado por categoría); verde ● = diferencia significativa'}].forEach(it => {
+  [{c:'var(--muted)', l:String(years[0])}, {c:'var(--tee)', l:legendNoteB || (years[1]+' (coloreado por categoría); verde ● = diferencia significativa')}].forEach(it => {
     const item = document.createElement('div');
     item.className = 'legend-item';
     item.innerHTML = `<span class="legend-swatch" style="background:${it.c}"></span>${it.l}`;
@@ -2980,6 +3197,14 @@ function drawYearlyBars(opts){
 // Section: SG por categoría
 // ============================================================
 let sgMode = 'rolling', sgWindow = 5;
+// Overlay de "última ronda", activable por separado del modo de vista (no es
+// un cuarto modo): cuando está encendido, se pinta el valor BRUTO (sin
+// promediar) de la última ronda de la selección como un símbolo distinto
+// (estrella) sobre el propio gráfico de líneas de media móvil/por mes, en el
+// mismo eje X que el último punto ya dibujado -- así se compara visualmente
+// la ronda más reciente contra la tendencia de fondo sin sustituir la vista
+// por un gráfico de barras. Ver drawLineChart/lastRoundOverlay.
+let sgShowLastRound = false;
 
 // Las cuatro categorías reconstruidas aquí cuadran exactamente con Shot Scope
 // -- ver la nota larga junto a SG_SERIES arriba para la metodología completa
@@ -3095,6 +3320,11 @@ function renderSgSection(rounds, holes, shots){
         tooltip = document.getElementById('sgTooltip'), wrap = document.getElementById('sgChartWrap'),
         caveat = document.getElementById('sgModeCaveat');
   document.getElementById('sgWindowControl').style.display = sgMode==='rolling' ? 'inline-flex' : 'none';
+  // El overlay de última ronda solo tiene sentido sobre el gráfico de líneas
+  // (media móvil/por mes) -- en "Por año" el gráfico ya es de barras A/B, así
+  // que el botón se oculta ahí en vez de quedar activable sin efecto visible.
+  document.getElementById('sgLastRoundToggleWrap').style.display = sgMode==='yearly' ? 'none' : 'inline-flex';
+  syncToggleButton('sgLastRoundToggle', sgShowLastRound);
 
   const years = distinctYears(rounds);
   if (sgMode === 'yearly') {
@@ -3107,7 +3337,12 @@ function renderSgSection(rounds, holes, shots){
     caveat.textContent = isMonthly ? 'Media simple por mes natural. Cuidado con los meses de 1-2 rondas -- el tamaño de muestra se ve en el tooltip.'
       : `Media móvil, ventana de ${sgWindow} rondas.`;
     const periods = computePeriods(sgMode, sgWindow, rounds).map(p => ({...p, values: sgValues(p, catByIdx)}));
-    drawLineChart({svg, legend, tooltip, wrap, periods, series:SG_SERIES, isMonthly, fmtVal:v=>fmtSigned(v,1)});
+    let lastRoundOverlay = null;
+    if (sgShowLastRound && rounds.length) {
+      const last = rounds[rounds.length-1];
+      lastRoundOverlay = {enabled:true, roundLabel:lastRoundOverlayLabel(last), valuesByKey: catByIdx[last.idx]};
+    }
+    drawLineChart({svg, legend, tooltip, wrap, periods, series:SG_SERIES, isMonthly, fmtVal:v=>fmtSigned(v,1), lastRoundOverlay});
   }
 
   // dynamic A/B comparison table, following the chart's own mode
@@ -3158,6 +3393,7 @@ document.getElementById('sgWindowControl').addEventListener('click', (e) => {
   document.querySelectorAll('#sgWindowControl .seg-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active'); sgWindow = parseInt(btn.dataset.window,10); render();
 });
+bindToggleButton('sgLastRoundToggle', v => { sgShowLastRound = v; });
 
 // ============================================================
 // Section: Resumen automático de la última ronda seleccionada
@@ -3508,9 +3744,7 @@ function renderRoundRadarChart(ids, data, windowState){
         + `<div>${bandTxt}</div>${statusTxt}`;
       tooltip.style.opacity = 1;
       const wrapRect = wrap.getBoundingClientRect();
-      let left = (p.x/W)*wrapRect.width + 14;
-      if (left > wrapRect.width - 190) left = (p.x/W)*wrapRect.width - 190;
-      tooltip.style.left = left + 'px';
+      tooltip.style.left = clampTooltipLeft(tooltip, wrapRect, (p.x/W)*wrapRect.width) + 'px';
       tooltip.style.top = (p.y/H)*wrapRect.height - 50 + 'px';
     });
     hit.addEventListener('mouseleave', () => { tooltip.style.opacity = 0; });
@@ -3634,7 +3868,8 @@ function renderLastRoundSummary(rounds, holes, shots){
 // ============================================================
 // Section: Errores graves
 // ============================================================
-let errMode = 'rolling', errWindow = 5, errMetric = 'count';
+let errMode = 'rolling', errWindow = 5;
+let errShowLastRound = false;
 let cataWindow = 'recent10'; // 'all' | 'recent10' | 'recent5' | 'recent3' — recency window for the lie/club catastrophic-shot breakdown
 
 function computeRoundErrorCounts(rounds, holes, shots){
@@ -3720,26 +3955,32 @@ function renderErrorsSection(rounds, holes, shots){
         tooltip = document.getElementById('errTooltip'), wrap = document.getElementById('errChartWrap'),
         caveat = document.getElementById('errModeCaveat');
   document.getElementById('errWindowControl').style.display = errMode==='rolling' ? 'inline-flex' : 'none';
+  document.getElementById('errLastRoundToggleWrap').style.display = errMode==='yearly' ? 'none' : 'inline-flex';
+  syncToggleButton('errLastRoundToggle', errShowLastRound);
 
   const years = distinctYears(rounds);
-  const metricLabel = errMetric==='pct' ? '% de aparición' : 'veces por ronda';
+  const metricLabel = 'veces por ronda';
   if (errMode === 'yearly') {
     caveat.textContent = years.length===2 ? `Comparación directa ${years[0]} vs. ${years[1]}, ${metricLabel}.` : 'Hacen falta dos años distintos en la selección.';
     const statsByKey = {};
     ERR_SERIES.forEach(s => {
-      const st = errMetric==='pct' ? computeYearlyErrPctStat(holes, shots, s.key) : computeYearlyErrStat(rounds, errByIdx, s.key);
+      const st = computeYearlyErrStat(rounds, errByIdx, s.key);
       if (st && st.p!==null) statsByKey[s.key]=st;
     });
-    const fmtVal = errMetric==='pct' ? (v=>fmtPlain(v,0)+'%') : (v=>fmtPlain(v,2));
-    drawYearlyBars({svg, legend, tooltip, wrap, series:ERR_SERIES, statsByKey, fmtVal, years, yClamp: errMetric==='pct' ? {min:0,max:100} : null});
+    const fmtVal = v=>fmtPlain(v,2);
+    drawYearlyBars({svg, legend, tooltip, wrap, series:ERR_SERIES, statsByKey, fmtVal, years, yClamp: null});
   } else {
     const isMonthly = errMode === 'monthly';
     caveat.textContent = isMonthly ? `Media simple por mes natural, ${metricLabel}.` : `Media móvil, ventana de ${errWindow} rondas, ${metricLabel}.`;
-    const periods = errMetric==='pct'
-      ? computePeriods(errMode, errWindow, rounds).map(p => ({...p, values: errPooledValues(p, holesByIdx, shotsByIdx)}))
-      : computePeriods(errMode, errWindow, rounds).map(p => ({...p, values: errValues(p, errByIdx)}));
-    const fmtVal = errMetric==='pct' ? (v=>fmtPlain(v,0)+'%') : (v=>fmtPlain(v,2));
-    drawLineChart({svg, legend, tooltip, wrap, periods, series:ERR_SERIES, isMonthly, fmtVal, yClamp: errMetric==='pct' ? {min:0,max:100} : null});
+    const periods = computePeriods(errMode, errWindow, rounds).map(p => ({...p, values: errValues(p, errByIdx)}));
+    const fmtVal = v=>fmtPlain(v,2);
+    let lastRoundOverlay = null;
+    if (errShowLastRound && rounds.length) {
+      const lastRound = rounds[rounds.length-1];
+      const valuesByKey = errByIdx[lastRound.idx];
+      lastRoundOverlay = {enabled:true, roundLabel:lastRoundOverlayLabel(lastRound), valuesByKey};
+    }
+    drawLineChart({svg, legend, tooltip, wrap, periods, series:ERR_SERIES, isMonthly, fmtVal, yClamp: null, lastRoundOverlay});
   }
 
   // mistake table: frecuencia + definición del ÚLTIMO intervalo disponible según la vista actual
@@ -3880,16 +4121,13 @@ document.getElementById('errWindowControl').addEventListener('click', (e) => {
   document.querySelectorAll('#errWindowControl .seg-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active'); errWindow = parseInt(btn.dataset.window,10); render();
 });
-document.getElementById('errMetricControl').addEventListener('click', (e) => {
-  const btn = e.target.closest('.seg-btn'); if (!btn) return;
-  document.querySelectorAll('#errMetricControl .seg-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active'); errMetric = btn.dataset.metric; render();
-});
+bindToggleButton('errLastRoundToggle', v => { errShowLastRound = v; });
 
 // ============================================================
 // Section: Putting by distance
 // ============================================================
 let puttMode = 'rolling', puttWindow = 5, puttMetric = 'sg';
+let puttShowLastRound = false;
 
 // Solo putts jugados desde green (lie==='Green') -- un putt desde fuera de
 // green ("Texas wedge" desde franja/calle) es short game, no putting, mismo
@@ -3941,6 +4179,7 @@ function computeYearlyPuttStat(shots, bucketKey, metric){
 // gráfico apilado año A vs año B sería una forma de gráfico distinta, no una
 // variación de este; se añade si hace falta).
 let threeputtCauseMode = 'rolling', threeputtCauseWindow = 5;
+let threeputtCauseShowLastRound = false;
 // Mismo umbral que el KPI ya existente "% putts embocados desde <=1.5m" --
 // así la clasificación usa la misma vara de medir "distancia que se debería
 // embocar casi siempre" que el resto del dashboard, en vez de inventar un
@@ -3984,6 +4223,7 @@ function renderThreeputtCause(rounds, shots){
         tooltip = document.getElementById('threeputtCauseTooltip'), wrap = document.getElementById('threeputtCauseChartWrap'),
         caveat = document.getElementById('threeputtCauseCaveat'), summaryEl = document.getElementById('threeputtCauseSummary');
   document.getElementById('threeputtCauseWindowControl').style.display = threeputtCauseMode==='rolling' ? 'inline-flex' : 'none';
+  syncToggleButton('threeputtCauseLastRoundToggle', threeputtCauseShowLastRound);
 
   const isMonthly = threeputtCauseMode === 'monthly';
   caveat.textContent = isMonthly
@@ -3993,7 +4233,13 @@ function renderThreeputtCause(rounds, shots){
     const v = threeputtCauseValues(p, shots);
     return {...p, values: v, tpN: v.n};
   });
-  drawStackedAreaChart({svg, legend, tooltip, wrap, periods, series: THREEPUTT_CAUSE_SERIES, isMonthly, fmtVal: v=>fmtPlain(v,0)+'%'});
+  let lastRoundOverlay = null;
+  if (threeputtCauseShowLastRound && rounds.length) {
+    const lastRound = rounds[rounds.length-1];
+    const v = threeputtCauseValues({rounds:[lastRound]}, shots);
+    lastRoundOverlay = {enabled:true, roundLabel:lastRoundOverlayLabel(lastRound), valuesByKey:v, n:v.n};
+  }
+  drawStackedAreaChart({svg, legend, tooltip, wrap, periods, series: THREEPUTT_CAUSE_SERIES, isMonthly, fmtVal: v=>fmtPlain(v,0)+'%', lastRoundOverlay});
 
   const {firstPuttFault, secondPuttFault, total} = classifyThreeputtCauses(shots, rounds);
   if (summaryEl) {
@@ -4012,6 +4258,7 @@ document.getElementById('threeputtCauseWindowControl').addEventListener('click',
   document.querySelectorAll('#threeputtCauseWindowControl .seg-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active'); threeputtCauseWindow = parseInt(btn.dataset.window,10); render();
 });
+bindToggleButton('threeputtCauseLastRoundToggle', v => { threeputtCauseShowLastRound = v; });
 
 function renderPuttingSection(rounds, shots){
   const puttsByIdx = buildPuttsByIdx(shots);
@@ -4019,6 +4266,8 @@ function renderPuttingSection(rounds, shots){
         tooltip = document.getElementById('puttTooltip'), wrap = document.getElementById('puttChartWrap'),
         caveat = document.getElementById('puttModeCaveat');
   document.getElementById('puttWindowControl').style.display = puttMode==='rolling' ? 'inline-flex' : 'none';
+  document.getElementById('puttLastRoundToggleWrap').style.display = puttMode==='yearly' ? 'none' : 'inline-flex';
+  syncToggleButton('puttLastRoundToggle', puttShowLastRound);
 
   const metricLabel = puttMetric==='made' ? '% putts embocados' : (puttMetric==='leave' ? 'proximidad media al hoyo tras el putt' : 'SG medio por putt');
   const fmtChart = puttMetric==='made' ? (v=>fmtPlain(v,0)+'%') : (puttMetric==='leave' ? (v=>fmtPlain(v,2)+'m') : (v=>fmtSigned(v,2)));
@@ -4035,7 +4284,12 @@ function renderPuttingSection(rounds, shots){
     const isMonthly = puttMode === 'monthly';
     caveat.textContent = isMonthly ? `Media simple por mes natural, ${metricLabel} por tramo.` : `Media móvil, ventana de ${puttWindow} rondas, ${metricLabel} por tramo.`;
     const periods = computePeriods(puttMode, puttWindow, rounds).map(p => ({...p, values: puttValues(p, puttsByIdx, puttMetric)}));
-    drawLineChart({svg, legend, tooltip, wrap, periods, series:PUTT_SERIES, isMonthly, fmtVal:fmtChart, yClamp});
+    let lastRoundOverlay = null;
+    if (puttShowLastRound && rounds.length) {
+      const lastRound = rounds[rounds.length-1];
+      lastRoundOverlay = {enabled:true, roundLabel:lastRoundOverlayLabel(lastRound), valuesByKey: puttValues({rounds:[lastRound]}, puttsByIdx, puttMetric)};
+    }
+    drawLineChart({svg, legend, tooltip, wrap, periods, series:PUTT_SERIES, isMonthly, fmtVal:fmtChart, yClamp, lastRoundOverlay});
   }
 }
 
@@ -4054,6 +4308,7 @@ document.getElementById('puttMetricControl').addEventListener('click', (e) => {
   document.querySelectorAll('#puttMetricControl .seg-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active'); puttMetric = btn.dataset.metric; render();
 });
+bindToggleButton('puttLastRoundToggle', v => { puttShowLastRound = v; });
 
 // ============================================================
 // Section: Hole recurrence (problem holes + best holes)
@@ -4422,7 +4677,7 @@ function windowRounds(rounds, windowState){
 }
 function windowLabel(windowState){
   const n = WINDOW_SIZES[windowState];
-  return `las últimas ${n} rondas`;
+  return n === 1 ? 'la última ronda' : `las últimas ${n} rondas`;
 }
 function setWindowNote(elId, rounds, effRounds, windowState){
   const el = document.getElementById(elId);
@@ -4442,6 +4697,21 @@ function syncWindowControl(containerId, value){
   const el = document.getElementById(containerId);
   if (!el) return;
   el.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.dataset.window === value));
+}
+// Generic on/off toggle button (not part of an exclusive seg-control group,
+// e.g. "Última ronda" overlay on/off) -- same .seg-btn/.active visual
+// language as the mode/window pickers, but a single standalone button that
+// flips its own state on click instead of choosing between siblings.
+function bindToggleButton(id, setter){
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.addEventListener('click', () => { setter(btn.dataset.active !== 'true'); render(); });
+}
+function syncToggleButton(id, active){
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.classList.toggle('active', active);
+  btn.setAttribute('data-active', active ? 'true' : 'false');
 }
 
 // "Mejores golpes" (Palos tab) -- every "golpe extraordinario" (SG >= 1.0)
@@ -4826,9 +5096,7 @@ function renderClubDistanceChart(shots){
         + `<div style="opacity:0.7;margin-top:4px">Rango real: ${fmtPlain(s.min,0)}&ndash;${fmtPlain(s.max,0)}m</div>`;
       tooltip.style.opacity = 1;
       const wrapRect = wrap.getBoundingClientRect();
-      let left = xAt(s.median)/W * wrapRect.width + 14;
-      if (left > wrapRect.width - 170) left = xAt(s.median)/W * wrapRect.width - 170;
-      tooltip.style.left = left + 'px';
+      tooltip.style.left = clampTooltipLeft(tooltip, wrapRect, xAt(s.median)/W * wrapRect.width) + 'px';
       tooltip.style.top = (y/H * wrapRect.height) - 50 + 'px';
     });
     hit.addEventListener('mouseleave', () => { tooltip.style.opacity = 0; });
@@ -5258,7 +5526,10 @@ function computeFlagDispersionPoints(rounds, holes, shots, category, applyMishit
       const h = holeMap[s.r+'|'+s.h];
       upDown = !!(h && h.gir===0 && h.pu<=1);
     }
-    points.push({club: s.cl, vo: s.vo, ho: s.ho, onGreen, upDown, r: s.r});
+    const hInfo = holeMap[s.r+'|'+s.h];
+    const holeNum = hInfo && hInfo.rh!==undefined && hInfo.rh!==null ? hInfo.rh : s.h;
+    const courseLabel = REAL_COURSE_LABEL[s.rc] || s.rc;
+    points.push({club: s.cl, vo: s.vo, ho: s.ho, onGreen, upDown, r: s.r, hole: holeNum, course: courseLabel});
   });
   return {points, excludedByClub};
 }
@@ -5285,10 +5556,19 @@ function drawDispersionRings(opts){
   const W = 700, H = 700, cx = W/2, cy = H/2 - 10;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   const maxR = Math.max(...points.map(p => Math.sqrt(p.vo*p.vo + p.ho*p.ho)));
-  const step = niceStep(maxR || 1);
-  const ringMax = Math.max(step, Math.ceil((maxR || step)/step)*step);
+  const fullStep = niceStep(maxR || 1);
+  const fullRingMax = Math.max(fullStep, Math.ceil((maxR || fullStep)/fullStep)*fullStep);
+  // Zoom con rueda del ratón (ver initChartAxisZoom): al ser un gráfico
+  // radial centrado siempre en la bandera (origen fijo), el zoom aquí no
+  // "apunta" hacia el cursor como en los gráficos de líneas -- simplemente
+  // acerca o aleja el radio máximo mostrado (opts.zoomR), manteniendo el
+  // centro fijo, que es el punto de referencia real de este gráfico.
+  const ringMax = opts.zoomR ? Math.min(fullRingMax, Math.max(fullRingMax*0.05, opts.zoomR)) : fullRingMax;
   const plotR = 275;
   const scale = plotR / (ringMax*1.08);
+  const step = niceStep(ringMax || 1);
+  svg.__zoomInfo = {kind:'r', ringMax, fullMax:fullRingMax,
+    redraw:(zoomR)=>drawDispersionRings({...opts, zoomR})};
 
   // anillos concéntricos + etiqueta de distancia sobre el eje vertical
   for (let v = step; v <= ringMax + 1e-9; v += step) {
@@ -5320,15 +5600,18 @@ function drawDispersionRings(opts){
     dot.style.cursor = 'default';
     dot.addEventListener('mousemove', (e) => {
       const dist = Math.sqrt(p.vo*p.vo + p.ho*p.ho);
+      const locBits = [];
+      if (p.course) locBits.push(p.course);
+      if (p.hole!==null && p.hole!==undefined) locBits.push(`Hoyo ${p.hole}`);
+      const locRow = locBits.length ? `<div style="opacity:0.7;margin-top:2px">${locBits.join(' · ')}</div>` : '';
       tooltip.innerHTML = `<div style="opacity:0.7;margin-bottom:4px">${p.club} · ${fmtDateShort(DATA.rounds[p.r].d)}</div>`
         + `<div>${style.label}</div>`
         + `<div>${(p.vo>=0?'Largo ':'Corto ')+fmtPlain(Math.abs(p.vo),1)}m · ${(p.ho>=0?'Derecha ':'Izquierda ')+fmtPlain(Math.abs(p.ho),1)}m</div>`
-        + `<div style="opacity:0.7;margin-top:2px">A ${fmtPlain(dist,1)}m de bandera</div>`;
+        + `<div style="opacity:0.7;margin-top:2px">A ${fmtPlain(dist,1)}m de bandera</div>`
+        + locRow;
       tooltip.style.opacity = 1;
       const wrapRect = wrap.getBoundingClientRect();
-      let left = x/W * wrapRect.width + 12;
-      if (left > wrapRect.width - 170) left = x/W * wrapRect.width - 170;
-      tooltip.style.left = left + 'px';
+      tooltip.style.left = clampTooltipLeft(tooltip, wrapRect, x/W * wrapRect.width) + 'px';
       tooltip.style.top = Math.max(0, (y/H * wrapRect.height) - 60) + 'px';
     });
     dot.addEventListener('mouseleave', () => { tooltip.style.opacity = 0; });
@@ -5444,6 +5727,7 @@ function computeTeeDispersionPoints(rounds, holes, shots){
   const effHoles = holes.filter(h => idxSet.has(h.r));
   const effShots = shots.filter(s => idxSet.has(s.r));
   const parMap = {}; effHoles.forEach(h => parMap[h.r+'|'+h.h] = h.p);
+  const holeMap = {}; effHoles.forEach(h => holeMap[h.r+'|'+h.h] = h);
   const startMap = computeStartDistMap(effShots);
   const points = [];
   effShots.forEach(s => {
@@ -5453,7 +5737,10 @@ function computeTeeDispersionPoints(rounds, holes, shots){
     if (classifyShot(s, par, startMap) !== 'tee') return;
     if (s.fo===null || s.fo===undefined || s.fir===null || s.fir===undefined) return;
     if (s.dist===null || s.dist===undefined) return;
-    points.push({club: s.cl, fo: s.fo, dist: s.dist, fir: s.fir===true, r: s.r});
+    const hInfo = holeMap[s.r+'|'+s.h];
+    const holeNum = hInfo && hInfo.rh!==undefined && hInfo.rh!==null ? hInfo.rh : s.h;
+    const courseLabel = REAL_COURSE_LABEL[s.rc] || s.rc;
+    points.push({club: s.cl, fo: s.fo, dist: s.dist, fir: s.fir===true, r: s.r, hole: holeNum, course: courseLabel});
   });
   return {points};
 }
@@ -5535,11 +5822,25 @@ function drawFairwayDispersion(opts){
   svg.innerHTML = ''; legend.innerHTML = '';
   const W = 700, H = 700, padTop = 40, padBottom = 54, padSide = 54;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  const {domain: xDomain} = xAxis || computeFairwayXDomain(points);
-  const {domain: yDomain, step: stepY} = yAxis || computeFairwayYDomain(points);
+  const {domain: fullXDomain} = xAxis || computeFairwayXDomain(points);
+  const {domain: fullYDomain, step: fullStepY} = yAxis || computeFairwayYDomain(points);
+  // Zoom con rueda del ratón (ver initChartAxisZoom): ambos ejes representan
+  // distancias reales (metros lateral / metros recorridos), así que el
+  // zoom encoge los dos dominios a la vez desde sus referencias fijas ya
+  // existentes (centro de calle en X, tee en Y=0) en vez de intentar
+  // "apuntar" al cursor -- igual de simple y semánticamente correcto que
+  // en el gráfico radial de aproches/short game.
+  let xDomain = fullXDomain, yDomain = fullYDomain, stepY = fullStepY;
+  if (opts.zoomXY) {
+    xDomain = Math.min(fullXDomain, Math.max(fullXDomain*0.05, opts.zoomXY.xDomain));
+    yDomain = Math.min(fullYDomain, Math.max(fullYDomain*0.05, opts.zoomXY.yDomain));
+    stepY = niceStep(yDomain || 1);
+  }
   const cx = W/2, plotHalfW = (W - padSide*2)/2, plotTop = padTop, plotBottom = H - padBottom;
   function xAt(fo){ return cx + (fo/xDomain)*plotHalfW; }
   function yAt(d){ return plotBottom - (d/yDomain)*(plotBottom-plotTop); }
+  svg.__zoomInfo = {kind:'xy', xDomain, yDomain, fullXDomain, fullYDomain,
+    redraw:(zoomXY)=>drawFairwayDispersion({...opts, zoomXY})};
 
   for (let v = 0; v <= yDomain + 1e-9; v += stepY) {
     const y = yAt(v);
@@ -5583,14 +5884,17 @@ function drawFairwayDispersion(opts){
     const dot = svgEl('circle', {cx:x, cy:y, r:5, fill: p.fir ? 'var(--good)' : 'var(--critical)', class:'dispersion-point'});
     dot.style.cursor = 'default';
     dot.addEventListener('mousemove', () => {
+      const locBits = [];
+      if (p.course) locBits.push(p.course);
+      if (p.hole!==null && p.hole!==undefined) locBits.push(`Hoyo ${p.hole}`);
+      const locRow = locBits.length ? `<div style="opacity:0.7;margin-top:2px">${locBits.join(' · ')}</div>` : '';
       tooltip.innerHTML = `<div style="opacity:0.7;margin-bottom:4px">${p.club} · ${fmtDateShort(DATA.rounds[p.r].d)}</div>`
         + `<div>${p.fir ? goodLabel : badLabel}</div>`
-        + `<div>${fmtPlain(p.dist,0)}m · ${(p.fo>=0?'Derecha ':'Izquierda ')+fmtPlain(Math.abs(p.fo),1)}m del centro</div>`;
+        + `<div>${fmtPlain(p.dist,0)}m · ${(p.fo>=0?'Derecha ':'Izquierda ')+fmtPlain(Math.abs(p.fo),1)}m del centro</div>`
+        + locRow;
       tooltip.style.opacity = 1;
       const wrapRect = wrap.getBoundingClientRect();
-      let left = x/W * wrapRect.width + 12;
-      if (left > wrapRect.width - 170) left = x/W * wrapRect.width - 170;
-      tooltip.style.left = left + 'px';
+      tooltip.style.left = clampTooltipLeft(tooltip, wrapRect, x/W * wrapRect.width) + 'px';
       tooltip.style.top = Math.max(0, (y/H * wrapRect.height) - 60) + 'px';
     });
     dot.addEventListener('mouseleave', () => { tooltip.style.opacity = 0; });
@@ -5793,15 +6097,19 @@ function computeTeeProblemMap(holes, shots){
 // golpe de entrada viene de fuera de la banda, así que el hoyo directamente
 // no genera ocasión para esta métrica).
 //
-// Golpes para acabar: total de golpes reales desde el golpe de entrada
-// (inclusive) hasta el final del hoyo, más cualquier golpe de penalización
-// (bookkeeping, sin posición propia) cuyo `sn` caiga después del golpe de
-// entrada -- así un error tras el golpe de ataque (p.ej. un wedge a agua)
-// SÍ cuenta contra la métrica, igual que en la experiencia real de Pau
-// jugando el hoyo. SG: suma de `s.sg` de los golpes reales desde la entrada
-// (inclusive) hasta el final; el coste de una penalización posterior ya
-// queda reflejado en el sg del golpe que la provoca, así que no hace falta
-// sumar nada aparte para las filas de penalización.
+// Dos observaciones por ocasión (una por hoyo -- un hoyo sin ningún golpe en
+// la banda no aporta observación ese hoyo): `strokes` = golpes reales desde
+// el golpe de entrada (inclusive) hasta el final del hoyo, más cualquier
+// golpe de penalización (bookkeeping, sin posición propia) cuyo `sn` caiga
+// después del golpe de entrada -- así un error tras el golpe de ataque
+// (p.ej. un wedge a agua) SÍ cuenta contra la métrica. `sg` = suma de `s.sg`
+// de los golpes reales desde la entrada (inclusive) hasta el final; el coste
+// de una penalización posterior ya queda reflejado en el sg del golpe que la
+// provoca, así que no hace falta sumar nada aparte para las filas de
+// penalización. Es la misma "ocasión" para las dos tarjetas de Resumen
+// (Golpes para acabar / SG para acabar, esta última solo como tooltip -- ver
+// la nota junto a KPI_DEFS más abajo), así que ambos números describen
+// siempre el mismo tramo del mismo hoyo.
 function computeWedgeAttackEntries(holes, shots){
   const real = shots.filter(s => s.et !== 'penalty');
   const byHoleReal = groupByHole(real);
@@ -5830,6 +6138,43 @@ function computeWedgeAttackEntries(holes, shots){
       if (hs[i].sg !== null && hs[i].sg !== undefined) sg += hs[i].sg;
     }
     results.push({ y: YEAR_BY_IDX[h.r], strokes: realStrokes + penaltyStrokes, sg });
+  });
+  return results;
+}
+
+// Métrica distinta y deliberadamente más simple, a petición de Pau: en vez de
+// "el primer golpe de cada hoyo que ataca el green desde una banda de
+// distancia" (computeWedgeAttackEntries, arriba), aquí se cuenta CUALQUIER
+// golpe (no solo el primero del hoyo, ni excluye un segundo wedge si hace
+// falta otro tras uno corto) cuyo PALO sea un wedge (`cl` contiene "Wedge" --
+// cubre tanto "Pitching Wedge" como los de grado, "49° Wedge"/"50°"/"53°"/
+// "55°"/"60°") y cuya distancia de inicio esté entre 40 y 120m. Al filtrar
+// directamente por palo (no por categoría de distancia como proxy de qué
+// palo se habrá usado), no hay riesgo de colar un hierro largo aunque la
+// banda sea más ancha que la de "ataque" (40-120m en vez de 45.72-100m) --
+// por eso aquí SÍ se puede bajar el límite inferior a 40m (un chip con wedge
+// algo más largo que un chip corto normal) sin miedo a mezclar approaches de
+// otro palo. Una observación por GOLPE, no por hoyo: cada wedge de la banda
+// es una muestra independiente de "qué tal pego los wedges", igual que
+// proxFull/proxShort miden cada golpe de su categoría por separado.
+function computeWedgeBandShots(holes, shots){
+  const real = shots.filter(s => s.et !== 'penalty');
+  const byHole = groupByHole(real);
+  Object.values(byHole).forEach(arr => arr.sort((a,b)=>a.sn-b.sn));
+  const results = [];
+  holes.forEach(h => {
+    const key = h.r+'|'+h.h;
+    const hs = byHole[key];
+    if (!hs || !hs.length) return;
+    let lastKnownRem = null;
+    hs.forEach((s, i) => {
+      const startDist = (i === 0) ? h.dm : lastKnownRem;
+      if (s.cl && s.cl.indexOf('Wedge') !== -1 && startDist !== null && startDist !== undefined
+          && startDist >= 40 && startDist <= 120 && s.sg !== null && s.sg !== undefined){
+        results.push({ y: YEAR_BY_IDX[h.r], sg: s.sg });
+      }
+      if (s.rem !== null && s.rem !== undefined) lastKnownRem = s.rem;
+    });
   });
   return results;
 }
@@ -5986,10 +6331,14 @@ const KPI_DEFS = [
   },
   {
     // Ver la nota larga junto a computeWedgeAttackEntries para la definición
-    // completa (banda 45.72-100m, primer golpe de cada hoyo, conteo inclusive).
-    // Una ocasión por hoyo (no por golpe ni por ronda) -- un hoyo sin ningún
-    // golpe en la banda simplemente no aporta observación ese hoyo.
+    // completa (banda 45.72-100m, primer golpe de cada hoyo). Una ocasión por
+    // hoyo (no por golpe ni por ronda) -- un hoyo sin ningún golpe en la banda
+    // simplemente no aporta observación ese hoyo. Tarjeta principal de esta
+    // familia -- el SG del mismo tramo (misma ocasión, mismo hoyo) se muestra
+    // como dato secundario en su tooltip en vez de tener tarjeta propia (ver
+    // `secondaryKey` y la nota junto a wedgeAttackFinishSg más abajo).
     key:'wedgeAttackStrokes', label:'Golpes para acabar, ataque con wedge (45-100m)', cssVar:'--approach', higherIsBetter:false, unit:'strokes',
+    secondaryKey:'wedgeAttackFinishSg',
     obsByYear(holes, shots){
       const entries = computeWedgeAttackEntries(holes, shots);
       const m = {};
@@ -5998,9 +6347,37 @@ const KPI_DEFS = [
     },
   },
   {
-    key:'wedgeAttackSg', label:'SG desde ataque con wedge (45-100m)', cssVar:'--short', higherIsBetter:true, unit:'sgSigned',
+    // Sin tarjeta propia -- solo alimenta el tooltip de "Golpes para acabar"
+    // (arriba) a través de `secondaryKey`. Se probó primero como tarjeta
+    // propia (SG sumado de todo el tramo, misma ocasión que golpes), pero Pau
+    // notó viendo las dos gráficas que eran prácticamente el espejo la una de
+    // la otra -- comprobado: r=-0.978 en las 152 ocasiones, y dentro de cada
+    // valor de "golpes" el SG apenas se dispersaba (p.ej. con 4 golpes, SG
+    // entre -0.97 y -0.28). Motivo: en la banda 45-100m el número de golpes
+    // esperado desde la posición de partida apenas varía, así que el SG del
+    // tramo completo acababa siendo casi literalmente "constante menos
+    // golpes reales" -- no añadía información nueva como tarjeta separada,
+    // pero Pau sí quería poder consultarlo sin dedicarle una tarjeta entera,
+    // de ahí el tooltip.
+    key:'wedgeAttackFinishSg', label:'SG para acabar, ataque con wedge (45-100m)', shortLabel:'SG para acabar', cssVar:'--approach', higherIsBetter:true, unit:'sgSigned',
     obsByYear(holes, shots){
       const entries = computeWedgeAttackEntries(holes, shots);
+      const m = {};
+      entries.forEach(e => { (m[e.y]=m[e.y]||[]).push(e.sg); });
+      return m;
+    },
+  },
+  {
+    // Ver la nota larga junto a computeWedgeBandShots para la definición
+    // completa -- a diferencia de la tarjeta de arriba, esta SÍ filtra
+    // directamente por palo (cualquier golpe con un wedge, no solo el primero
+    // del hoyo) en la banda 40-120m, pensada como métrica de ejecución del
+    // wedge en sí misma, no del resultado del hoyo desde el punto de ataque.
+    // Una observación por golpe (no por hoyo) -- un hoyo puede aportar más de
+    // una si hace falta un segundo wedge dentro de la banda.
+    key:'wedgeBandSg', label:'SG de golpes con wedge (40-120m)', cssVar:'--short', higherIsBetter:true, unit:'sgSigned',
+    obsByYear(holes, shots){
+      const entries = computeWedgeBandShots(holes, shots);
       const m = {};
       entries.forEach(e => { (m[e.y]=m[e.y]||[]).push(e.sg); });
       return m;
@@ -6036,6 +6413,17 @@ function kpiYearlyStat(def, holes, shots){
   if (a.length<2 || b.length<2) return {years, meanA:mean(a), meanB:mean(b), n:[a.length,b.length], p:null, sig:false};
   const w = welch(a,b);
   return {years, meanA:mean(a), meanB:mean(b), n:[a.length,b.length], p:w.p, sig:w.p<0.05};
+}
+// Valor BRUTO (sin promediar, sin comparación) de un KPI para la última
+// ronda de la selección en sí -- usado solo por el overlay "Última ronda"
+// (ver drawMiniLine/lastRoundOverlay), no por ningún modo de vista. A
+// diferencia de kpiCalc (que agrega sobre TODOS los hoyos/golpes que se le
+// pasen), aquí se filtra primero a los de la última ronda únicamente.
+function kpiLastRoundValue(def, rounds, holesAll, shotsAll){
+  if (!rounds.length) return null;
+  const last = rounds[rounds.length-1];
+  const lastHoles = holesAll.filter(h=>h.r===last.idx), lastShots = shotsAll.filter(s=>s.r===last.idx);
+  return kpiCalc(def, lastHoles, lastShots);
 }
 function kpiPooledSeries(mode, window, rounds, holesAll, shotsAll){
   const holesByIdx = {}; holesAll.forEach(h=>(holesByIdx[h.r]=holesByIdx[h.r]||[]).push(h));
@@ -6103,25 +6491,54 @@ function parTypeYearlyStat(holes, rounds){
 }
 
 function drawParTypeLine(opts){
-  const {svg, tooltip, wrap, periods, isMonthly} = opts;
+  const {svg, tooltip, wrap, periods, isMonthly, lastRoundOverlay} = opts;
   svg.innerHTML = '';
   const W=640, H=170, padL=10, padR=10, padT=14, padB=22;
   const plotW=W-padL-padR, plotH=H-padT-padB;
   const n = periods.length;
-  if (!n) { const t=svgEl('text',{x:W/2,y:H/2,'text-anchor':'middle',class:'axis-label'}); t.textContent='Sin datos'; svg.appendChild(t); return; }
+  if (!n) { svg.__zoomInfo = null; const t=svgEl('text',{x:W/2,y:H/2,'text-anchor':'middle',class:'axis-label'}); t.textContent='Sin datos'; svg.appendChild(t); return; }
   const allPresent = [];
   periods.forEach(p => PAR_TYPES.forEach(pt => { const v=p.values[pt.key]; if (v!==null && v!==undefined && !Number.isNaN(v)) allPresent.push(v); }));
-  if (!allPresent.length) { const t=svgEl('text',{x:W/2,y:H/2,'text-anchor':'middle',class:'axis-label'}); t.textContent='Sin datos'; svg.appendChild(t); return; }
+  if (lastRoundOverlay && lastRoundOverlay.enabled) {
+    PAR_TYPES.forEach(pt => { const v = lastRoundOverlay.valuesByKey[pt.key]; if (v!==null && v!==undefined && !Number.isNaN(v)) allPresent.push(v); });
+  }
+  if (!allPresent.length) { svg.__zoomInfo = null; const t=svgEl('text',{x:W/2,y:H/2,'text-anchor':'middle',class:'axis-label'}); t.textContent='Sin datos'; svg.appendChild(t); return; }
 
-  let yMin = Math.min(0, ...allPresent), yMax = Math.max(0, ...allPresent);
-  const span = Math.max(yMax-yMin, 1);
-  const pad = span*0.18; yMin -= pad; yMax += pad;
-  function xAt(i){ return n===1 ? padL+plotW/2 : padL+(i/(n-1))*plotW; }
+  let fullYMin = Math.min(0, ...allPresent), fullYMax = Math.max(0, ...allPresent);
+  const span = Math.max(fullYMax-fullYMin, 1);
+  const pad = span*0.18; fullYMin -= pad; fullYMax += pad;
+  // Zoom con rueda del ratón (ver initChartAxisZoom): mismo mecanismo que
+  // drawLineChart -- opts.zoomY sustituye el rango Y real de los datos.
+  let yMin = fullYMin, yMax = fullYMax;
+  if (opts.zoomY) {
+    yMin = Math.max(fullYMin, opts.zoomY.min);
+    yMax = Math.min(fullYMax, opts.zoomY.max);
+    if (!(yMax > yMin)) { yMin = fullYMin; yMax = fullYMax; }
+  }
+  // Zoom horizontal (eje X, índice de periodo): ver nota equivalente en
+  // drawLineChart.
+  const fullXMin = 0, fullXMax = Math.max(1, n-1);
+  let xMin = fullXMin, xMax = fullXMax;
+  if (opts.zoomX) {
+    xMin = Math.max(fullXMin, opts.zoomX.min);
+    xMax = Math.min(fullXMax, opts.zoomX.max);
+    if (!(xMax > xMin)) { xMin = fullXMin; xMax = fullXMax; }
+  }
+  function xAt(i){ return n===1 ? padL+plotW/2 : padL+((i-xMin)/(xMax-xMin))*plotW; }
   function yAt(v){ return padT+plotH-((v-yMin)/(yMax-yMin))*plotH; }
+  svg.__zoomInfo = {kind:'y', W, H, padT, plotH, padL, plotW, yMin, yMax, fullMin:fullYMin, fullMax:fullYMax,
+    xMin, xMax, fullXMin, fullXMax,
+    redraw:(zoom)=>drawParTypeLine({...opts, zoomY: zoom && zoom.zoomY, zoomX: zoom && zoom.zoomX})};
+
+  // Todo lo "de datos" va dentro de un grupo recortado al área de trazado --
+  // ver nota en clipToPlotArea. hitArea se queda fuera (invisible, y a
+  // propósito más alto que el área de trazado para un objetivo de ratón más
+  // cómodo en esta tarjeta compacta), así que el recorte no le afecta.
+  const plotG = clipToPlotArea(svg, padL, 0, W - padL, padT + plotH);
 
   // línea de referencia en 0 (jugar exactamente par, en neto)
   const zeroY = yAt(0);
-  svg.appendChild(svgEl('line', {x1:padL, x2:padL+plotW, y1:zeroY, y2:zeroY, class:'zero-line'}));
+  plotG.appendChild(svgEl('line', {x1:padL, x2:padL+plotW, y1:zeroY, y2:zeroY, class:'zero-line'}));
 
   const seriesPts = {};
   PAR_TYPES.forEach(pt => {
@@ -6130,22 +6547,22 @@ function drawParTypeLine(opts){
     seriesPts[pt.key] = pts;
     let d='', started=false;
     pts.forEach(p2 => { if (p2===null) { started=false; return; } d += (started?' L ':'M ')+p2[0]+' '+p2[1]; started=true; });
-    if (d) svg.appendChild(svgEl('path', {d, fill:'none', stroke:`var(${pt.cssVar})`, 'stroke-width':2, 'stroke-linecap':'round', 'stroke-linejoin':'round'}));
+    if (d) plotG.appendChild(svgEl('path', {d, fill:'none', stroke:`var(${pt.cssVar})`, 'stroke-width':2, 'stroke-linecap':'round', 'stroke-linejoin':'round'}));
     let lastPt = null;
     for (let i=pts.length-1;i>=0;i--){ if (pts[i]!==null){ lastPt=pts[i]; break; } }
-    if (lastPt) svg.appendChild(svgEl('circle', {cx:lastPt[0], cy:lastPt[1], r:3.2, fill:`var(${pt.cssVar})`}));
+    if (lastPt) plotG.appendChild(svgEl('circle', {cx:lastPt[0], cy:lastPt[1], r:3.2, fill:`var(${pt.cssVar})`}));
   });
 
   const hoverLine = svgEl('line', {x1:0,x2:0,y1:padT,y2:padT+plotH, stroke:'var(--border-strong)', 'stroke-width':1, opacity:0});
-  svg.appendChild(hoverLine);
-  const hoverDots = PAR_TYPES.map(pt => { const c = svgEl('circle', {r:3.6, fill:`var(${pt.cssVar})`, stroke:'var(--surface)', 'stroke-width':1.3, opacity:0}); svg.appendChild(c); return c; });
+  plotG.appendChild(hoverLine);
+  const hoverDots = PAR_TYPES.map(pt => { const c = svgEl('circle', {r:3.6, fill:`var(${pt.cssVar})`, stroke:'var(--surface)', 'stroke-width':1.3, opacity:0}); plotG.appendChild(c); return c; });
   const hitArea = svgEl('rect', {x:padL, y:0, width:plotW, height:H, fill:'transparent'});
   svg.appendChild(hitArea);
   hitArea.addEventListener('mousemove', (e) => {
     const rect = svg.getBoundingClientRect();
     const xFrac = (e.clientX - rect.left) / rect.width;
     const xSvg = xFrac * W;
-    let i = Math.round(((xSvg - padL)/plotW) * (n-1));
+    let i = Math.round(xMin + ((xSvg - padL)/plotW) * (xMax - xMin));
     i = Math.max(0, Math.min(n-1, i));
     hoverLine.setAttribute('x1', xAt(i)); hoverLine.setAttribute('x2', xAt(i)); hoverLine.setAttribute('opacity', 1);
     let rows = '';
@@ -6161,18 +6578,46 @@ function drawParTypeLine(opts){
     tooltip.innerHTML = `<div style="opacity:0.7;margin-bottom:3px">${head}</div>${rows}`;
     tooltip.style.opacity = 1;
     const wrapRect = wrap.getBoundingClientRect();
-    let left = xAt(i)/W*wrapRect.width + 8;
-    if (left > wrapRect.width - 150) left = xAt(i)/W*wrapRect.width - 150;
-    tooltip.style.left = left+'px';
+    tooltip.style.left = clampTooltipLeft(tooltip, wrapRect, xAt(i)/W*wrapRect.width) + 'px';
     tooltip.style.top = '0px';
   });
   hitArea.addEventListener('mouseleave', () => { hoverLine.setAttribute('opacity',0); hoverDots.forEach(d=>d.setAttribute('opacity',0)); tooltip.style.opacity=0; });
 
-  const t0 = svgEl('text', {x:padL, y:H-6, class:'axis-label', 'text-anchor':'start'});
-  t0.textContent = isMonthly ? periods[0].label : periods[0].label.slice(0,7);
+  if (lastRoundOverlay && lastRoundOverlay.enabled) {
+    const xOv = xAt(n-1);
+    PAR_TYPES.forEach(pt => {
+      const v = lastRoundOverlay.valuesByKey[pt.key];
+      if (v===null || v===undefined || Number.isNaN(v)) return;
+      const yOv = yAt(v);
+      const halo = svgEl('text', {x:xOv, y:yOv+5, 'text-anchor':'middle', 'font-size':15, stroke:'var(--surface)', 'stroke-width':4, 'stroke-linejoin':'round'});
+      halo.textContent = '★';
+      plotG.appendChild(halo);
+      const star = svgEl('text', {x:xOv, y:yOv+5, 'text-anchor':'middle', 'font-size':15, fill:`var(${pt.cssVar})`});
+      star.textContent = '★';
+      star.style.cursor = 'pointer';
+      plotG.appendChild(star);
+      star.addEventListener('mouseenter', () => {
+        tooltip.innerHTML = `<div style="opacity:0.7;margin-bottom:3px">★ Última ronda: ${lastRoundOverlay.roundLabel}</div><div><span style="color:var(${pt.cssVar})">★</span> ${pt.label}: ${fmtSigned(v,2)}</div>`;
+        tooltip.style.opacity = 1;
+        const wrapRect = wrap.getBoundingClientRect();
+        tooltip.style.left = clampTooltipLeft(tooltip, wrapRect, xOv/W*wrapRect.width) + 'px';
+        tooltip.style.top = '0px';
+      });
+      star.addEventListener('mouseleave', () => { tooltip.style.opacity = 0; });
+    });
+  }
+
+  // Con zoom horizontal activo, estas dos etiquetas de extremo pasan a
+  // marcar el primer/último periodo VISIBLE (no siempre periods[0]/[n-1]),
+  // en la posición real que les da xAt() -- que coincide con el borde del
+  // área de trazado tanto con zoom como sin él.
+  const visLo0 = Math.max(0, Math.ceil(xMin - 1e-9));
+  const visHi0 = Math.min(n-1, Math.floor(xMax + 1e-9));
+  const t0 = svgEl('text', {x:xAt(visLo0), y:H-6, class:'axis-label', 'text-anchor':'start'});
+  t0.textContent = isMonthly ? periods[visLo0].label : periods[visLo0].label.slice(0,7);
   svg.appendChild(t0);
-  const t1 = svgEl('text', {x:padL+plotW, y:H-6, class:'axis-label', 'text-anchor':'end'});
-  t1.textContent = isMonthly ? periods[n-1].label : periods[n-1].label.slice(0,7);
+  const t1 = svgEl('text', {x:xAt(visHi0), y:H-6, class:'axis-label', 'text-anchor':'end'});
+  t1.textContent = isMonthly ? periods[visHi0].label : periods[visHi0].label.slice(0,7);
   svg.appendChild(t1);
 }
 
@@ -6230,52 +6675,99 @@ function drawParTypeYearly(opts){
   });
 }
 
+// Posiciona el tooltip horizontalmente usando su ancho REAL renderizado
+// (tooltip.offsetWidth) en vez de un margen de clamp fijo -- en los KPI
+// tiles estrechos (drawMiniLine, ~320 unidades SVG mapeadas a un ancho de
+// tarjeta pequeño), un margen fijo insuficiente dejaba el tooltip de la
+// estrella "Última ronda" cortado en el borde derecho cuando su contenido
+// (fecha + valor + métrica secundaria) era más ancho que el margen.
+function clampTooltipLeft(tooltip, wrapRect, xPx){
+  const tw = tooltip.offsetWidth || 140;
+  let left = xPx + 8;
+  if (left + tw > wrapRect.width - 4) left = xPx - tw - 8;
+  if (left < 4) left = 4;
+  return left;
+}
+
 function drawMiniLine(opts){
-  const {svg, tooltip, wrap, periods, def, isMonthly} = opts;
+  const {svg, tooltip, wrap, periods, def, isMonthly, secondaryDef, width, lastRoundOverlay} = opts;
   svg.innerHTML = '';
-  const W=320, H=170, padL=6, padR=6, padT=14, padB=22;
+  const W=width||320, H=170, padL=6, padR=6, padT=14, padB=22;
   const plotW=W-padL-padR, plotH=H-padT-padB;
   const n = periods.length;
-  if (!n) { const t=svgEl('text',{x:W/2,y:H/2,'text-anchor':'middle',class:'axis-label'}); t.textContent='Sin datos'; svg.appendChild(t); return; }
+  if (!n) { svg.__zoomInfo = null; const t=svgEl('text',{x:W/2,y:H/2,'text-anchor':'middle',class:'axis-label'}); t.textContent='Sin datos'; svg.appendChild(t); return; }
   const vals = periods.map(p=>p.values[def.key]);
   const present = vals.filter(v=>v!==null && v!==undefined && !Number.isNaN(v));
-  if (!present.length) { const t=svgEl('text',{x:W/2,y:H/2,'text-anchor':'middle',class:'axis-label'}); t.textContent='Sin datos'; svg.appendChild(t); return; }
+  if (!present.length) { svg.__zoomInfo = null; const t=svgEl('text',{x:W/2,y:H/2,'text-anchor':'middle',class:'axis-label'}); t.textContent='Sin datos'; svg.appendChild(t); return; }
+  // El overlay de última ronda puede caer fuera del rango de las medias ya
+  // dibujadas -- se incluye en el cálculo del eje Y para que la estrella
+  // nunca quede recortada fuera del área visible (misma idea que en
+  // drawLineChart).
+  const scaleVals = present.slice();
+  const overlayVal = lastRoundOverlay && lastRoundOverlay.enabled ? lastRoundOverlay.value : null;
+  if (overlayVal!==null && overlayVal!==undefined && !Number.isNaN(overlayVal)) scaleVals.push(overlayVal);
 
-  let yMin = Math.min(...present), yMax = Math.max(...present);
-  const span = def.unit==='m' ? Math.max(yMax-yMin, 2) : Math.max(yMax-yMin, 4);
-  if (yMax - yMin < span) { const mid=(yMax+yMin)/2; yMin=mid-span/2; yMax=mid+span/2; }
-  const pad = (yMax-yMin)*0.18; yMin -= pad; yMax += pad;
+  let fullYMin = Math.min(...scaleVals), fullYMax = Math.max(...scaleVals);
+  const span = def.unit==='m' ? Math.max(fullYMax-fullYMin, 2) : Math.max(fullYMax-fullYMin, 4);
+  if (fullYMax - fullYMin < span) { const mid=(fullYMax+fullYMin)/2; fullYMin=mid-span/2; fullYMax=mid+span/2; }
+  const pad = (fullYMax-fullYMin)*0.18; fullYMin -= pad; fullYMax += pad;
   // pct/m are inherently non-negative quantities -- floor at 0. A signed SG
   // value (sgSigned) is typically negative, so it must NOT be floored to 0.
-  if (def.unit !== 'sgSigned') yMin = Math.max(0, yMin);
-  if (def.unit === 'pct') yMax = Math.min(100, yMax);
-  function xAt(i){ return n===1 ? padL+plotW/2 : padL+(i/(n-1))*plotW; }
+  if (def.unit !== 'sgSigned') fullYMin = Math.max(0, fullYMin);
+  if (def.unit === 'pct') fullYMax = Math.min(100, fullYMax);
+  // Zoom con rueda del ratón (ver initChartAxisZoom): mismo mecanismo que
+  // drawLineChart -- opts.zoomY sustituye el rango Y real de los datos.
+  let yMin = fullYMin, yMax = fullYMax;
+  if (opts.zoomY) {
+    yMin = Math.max(fullYMin, opts.zoomY.min);
+    yMax = Math.min(fullYMax, opts.zoomY.max);
+    if (!(yMax > yMin)) { yMin = fullYMin; yMax = fullYMax; }
+  }
+  // Zoom horizontal (eje X, índice de periodo): ver nota equivalente en
+  // drawLineChart.
+  const fullXMin = 0, fullXMax = Math.max(1, n-1);
+  let xMin = fullXMin, xMax = fullXMax;
+  if (opts.zoomX) {
+    xMin = Math.max(fullXMin, opts.zoomX.min);
+    xMax = Math.min(fullXMax, opts.zoomX.max);
+    if (!(xMax > xMin)) { xMin = fullXMin; xMax = fullXMax; }
+  }
+  function xAt(i){ return n===1 ? padL+plotW/2 : padL+((i-xMin)/(xMax-xMin))*plotW; }
   function yAt(v){ return padT+plotH-((v-yMin)/(yMax-yMin))*plotH; }
+  svg.__zoomInfo = {kind:'y', W, H, padT, plotH, padL, plotW, yMin, yMax, fullMin:fullYMin, fullMax:fullYMax,
+    xMin, xMax, fullXMin, fullXMax,
+    redraw:(zoom)=>drawMiniLine({...opts, zoomY: zoom && zoom.zoomY, zoomX: zoom && zoom.zoomX})};
+
+  // Todo lo "de datos" va dentro de un grupo recortado al área de trazado --
+  // ver nota en clipToPlotArea. hitArea se queda fuera (invisible, y a
+  // propósito más alto que el área de trazado), así que el recorte no le
+  // afecta.
+  const plotG = clipToPlotArea(svg, padL, 0, W - padL, padT + plotH);
 
   const pts = vals.map((v,i)=> (v===null||v===undefined||Number.isNaN(v)) ? null : [xAt(i), yAt(v)]);
   let d='', started=false;
   pts.forEach(pt => { if (pt===null) { started=false; return; } d += (started?' L ':'M ')+pt[0]+' '+pt[1]; started=true; });
-  if (d) svg.appendChild(svgEl('path', {d, fill:'none', stroke:`var(${def.cssVar})`, 'stroke-width':2.5, 'stroke-linecap':'round','stroke-linejoin':'round'}));
+  if (d) plotG.appendChild(svgEl('path', {d, fill:'none', stroke:`var(${def.cssVar})`, 'stroke-width':2.5, 'stroke-linecap':'round','stroke-linejoin':'round'}));
 
   pts.forEach((pt,i) => {
     if (pt===null) return;
-    svg.appendChild(svgEl('circle', {cx:pt[0], cy:pt[1], r:2, fill:`var(${def.cssVar})`, opacity:0.55}));
+    plotG.appendChild(svgEl('circle', {cx:pt[0], cy:pt[1], r:2, fill:`var(${def.cssVar})`, opacity:0.55}));
   });
   let lastPt = null;
   for (let i=pts.length-1;i>=0;i--){ if (pts[i]!==null){ lastPt=pts[i]; break; } }
-  if (lastPt) svg.appendChild(svgEl('circle', {cx:lastPt[0], cy:lastPt[1], r:3.4, fill:`var(${def.cssVar})`}));
+  if (lastPt) plotG.appendChild(svgEl('circle', {cx:lastPt[0], cy:lastPt[1], r:3.4, fill:`var(${def.cssVar})`}));
 
   const hoverLine = svgEl('line', {x1:0,x2:0,y1:padT,y2:padT+plotH, stroke:'var(--border-strong)', 'stroke-width':1, opacity:0});
-  svg.appendChild(hoverLine);
+  plotG.appendChild(hoverLine);
   const hoverDot = svgEl('circle', {r:3.6, fill:`var(${def.cssVar})`, stroke:'var(--surface)', 'stroke-width':1.3, opacity:0});
-  svg.appendChild(hoverDot);
+  plotG.appendChild(hoverDot);
   const hitArea = svgEl('rect', {x:padL, y:0, width:plotW, height:H, fill:'transparent'});
   svg.appendChild(hitArea);
   hitArea.addEventListener('mousemove', (e) => {
     const rect = svg.getBoundingClientRect();
     const xFrac = (e.clientX - rect.left) / rect.width;
     const xSvg = xFrac * W;
-    let i = Math.round(((xSvg - padL)/plotW) * (n-1));
+    let i = Math.round(xMin + ((xSvg - padL)/plotW) * (xMax - xMin));
     i = Math.max(0, Math.min(n-1, i));
     const pt = pts[i];
     hoverLine.setAttribute('x1', xAt(i)); hoverLine.setAttribute('x2', xAt(i)); hoverLine.setAttribute('opacity', 1);
@@ -6283,31 +6775,62 @@ function drawMiniLine(opts){
     else hoverDot.setAttribute('opacity', 0);
     const p = periods[i], v = vals[i];
     const head = isMonthly ? `${p.label} · ${p.rounds.length} r.` : p.label;
-    tooltip.innerHTML = `<div style="opacity:0.7;margin-bottom:3px">${head}</div><div>${kpiFmtValue(def, v)}</div>`;
+    let secondaryRow = '';
+    if (secondaryDef) {
+      const sv = p.values[secondaryDef.key];
+      secondaryRow = `<div style="opacity:0.7;margin-top:2px">${secondaryDef.shortLabel||secondaryDef.label}: ${kpiFmtValue(secondaryDef, sv)}</div>`;
+    }
+    tooltip.innerHTML = `<div style="opacity:0.7;margin-bottom:3px">${head}</div><div>${kpiFmtValue(def, v)}</div>${secondaryRow}`;
     tooltip.style.opacity = 1;
     const wrapRect = wrap.getBoundingClientRect();
-    let left = xAt(i)/W*wrapRect.width + 8;
-    if (left > wrapRect.width - 100) left = xAt(i)/W*wrapRect.width - 100;
-    tooltip.style.left = left+'px';
+    tooltip.style.left = clampTooltipLeft(tooltip, wrapRect, xAt(i)/W*wrapRect.width)+'px';
     tooltip.style.top = '0px';
   });
   hitArea.addEventListener('mouseleave', () => { hoverLine.setAttribute('opacity',0); hoverDot.setAttribute('opacity',0); tooltip.style.opacity=0; });
 
-  const t0 = svgEl('text', {x:padL, y:H-6, class:'axis-label', 'text-anchor':'start'});
-  t0.textContent = isMonthly ? periods[0].label : periods[0].label.slice(0,7);
+  if (overlayVal!==null && overlayVal!==undefined && !Number.isNaN(overlayVal)) {
+    const xOv = xAt(n-1), yOv = yAt(overlayVal);
+    const halo = svgEl('text', {x:xOv, y:yOv+5, 'text-anchor':'middle', 'font-size':15, stroke:'var(--surface)', 'stroke-width':4, 'stroke-linejoin':'round'});
+    halo.textContent = '★';
+    plotG.appendChild(halo);
+    const star = svgEl('text', {x:xOv, y:yOv+5, 'text-anchor':'middle', 'font-size':15, fill:`var(${def.cssVar})`});
+    star.textContent = '★';
+    star.style.cursor = 'pointer';
+    plotG.appendChild(star);
+    star.addEventListener('mouseenter', () => {
+      let secondaryRow = '';
+      if (secondaryDef && lastRoundOverlay.secondaryValue!==null && lastRoundOverlay.secondaryValue!==undefined) {
+        secondaryRow = `<div style="opacity:0.7;margin-top:2px">${secondaryDef.shortLabel||secondaryDef.label}: ${kpiFmtValue(secondaryDef, lastRoundOverlay.secondaryValue)}</div>`;
+      }
+      tooltip.innerHTML = `<div style="opacity:0.7;margin-bottom:3px">★ Última ronda: ${lastRoundOverlay.roundLabel}</div><div>${kpiFmtValue(def, overlayVal)}</div>${secondaryRow}`;
+      tooltip.style.opacity = 1;
+      const wrapRect = wrap.getBoundingClientRect();
+      tooltip.style.left = clampTooltipLeft(tooltip, wrapRect, xOv/W*wrapRect.width)+'px';
+      tooltip.style.top = '0px';
+    });
+    star.addEventListener('mouseleave', () => { tooltip.style.opacity = 0; });
+  }
+
+  // Con zoom horizontal activo, estas dos etiquetas de extremo pasan a
+  // marcar el primer/último periodo VISIBLE (ver misma nota en
+  // drawParTypeLine).
+  const visLo0 = Math.max(0, Math.ceil(xMin - 1e-9));
+  const visHi0 = Math.min(n-1, Math.floor(xMax + 1e-9));
+  const t0 = svgEl('text', {x:xAt(visLo0), y:H-6, class:'axis-label', 'text-anchor':'start'});
+  t0.textContent = isMonthly ? periods[visLo0].label : periods[visLo0].label.slice(0,7);
   svg.appendChild(t0);
-  const t1 = svgEl('text', {x:padL+plotW, y:H-6, class:'axis-label', 'text-anchor':'end'});
-  t1.textContent = isMonthly ? periods[n-1].label : periods[n-1].label.slice(0,7);
+  const t1 = svgEl('text', {x:xAt(visHi0), y:H-6, class:'axis-label', 'text-anchor':'end'});
+  t1.textContent = isMonthly ? periods[visHi0].label : periods[visHi0].label.slice(0,7);
   svg.appendChild(t1);
 }
 
 function drawMiniYearly(opts){
-  const {svg, tooltip, wrap, def, st, years} = opts;
+  const {svg, tooltip, wrap, def, st, years, secondaryDef, stSecondary, width, emptyMsg} = opts;
   svg.innerHTML = '';
-  const W=320, H=170, padL=14, padR=14, padT=22, padB=22;
+  const W=width||320, H=170, padL=14, padR=14, padT=22, padB=22;
   if (!st || st.p===null) {
     const t = svgEl('text', {x:W/2, y:H/2, 'text-anchor':'middle', class:'axis-label'});
-    t.textContent = years.length===2 ? 'Muestra insuficiente' : 'Hacen falta 2 años';
+    t.textContent = emptyMsg || (years.length===2 ? 'Muestra insuficiente' : 'Hacen falta 2 años');
     svg.appendChild(t);
     return;
   }
@@ -6325,8 +6848,8 @@ function drawMiniYearly(opts){
   const barW = plotW*0.24, gap = plotW*0.14;
   const cx = W/2;
   const bars = [
-    {val:st.meanA, x:cx-gap/2-barW, color:'var(--muted)', label:String(st.years[0])},
-    {val:st.meanB, x:cx+gap/2, color:`var(${def.cssVar})`, label:String(st.years[1])},
+    {val:st.meanA, secondaryVal: stSecondary ? stSecondary.meanA : null, x:cx-gap/2-barW, color:'var(--muted)', label:String(st.years[0])},
+    {val:st.meanB, secondaryVal: stSecondary ? stSecondary.meanB : null, x:cx+gap/2, color:`var(${def.cssVar})`, label:String(st.years[1])},
   ];
   bars.forEach(b => {
     const yVal = yAt(b.val);
@@ -6334,7 +6857,10 @@ function drawMiniYearly(opts){
     const rect = svgEl('rect', {x:b.x, y:y, width:barW, height:Math.max(Math.abs(yZero-yVal),1.5), fill:b.color, rx:3});
     rect.style.cursor = 'pointer';
     rect.addEventListener('mousemove', () => {
-      tooltip.innerHTML = `<div style="opacity:0.7;margin-bottom:3px">${b.label}</div><div>${kpiFmtValue(def, b.val)}</div>`;
+      const secondaryRow = secondaryDef
+        ? `<div style="opacity:0.7;margin-top:2px">${secondaryDef.shortLabel||secondaryDef.label}: ${kpiFmtValue(secondaryDef, b.secondaryVal)}</div>`
+        : '';
+      tooltip.innerHTML = `<div style="opacity:0.7;margin-bottom:3px">${b.label}</div><div>${kpiFmtValue(def, b.val)}</div>${secondaryRow}`;
       tooltip.style.opacity = 1;
       const wrapRect = wrap.getBoundingClientRect();
       tooltip.style.left = ((b.x-padL)/plotW*wrapRect.width) + 'px';
@@ -6353,14 +6879,35 @@ function drawMiniYearly(opts){
   }
 }
 
+// Valores BRUTOS (sin promediar, sin comparación) de resultado neto vs. par
+// por tipo de hoyo para la última ronda en sí -- usado solo por el overlay
+// "Última ronda" del gráfico de líneas (ver drawParTypeLine/lastRoundOverlay
+// y kpiLastRoundValue arriba, mismo patrón).
+function parTypeLastRoundValues(holes, rounds){
+  if (!rounds.length) return null;
+  const last = rounds[rounds.length-1];
+  const byPar = {3:[], 4:[], 5:[]};
+  holes.forEach(h => { if (h.r===last.idx && byPar[h.p]) byPar[h.p].push(h.ns - h.p); });
+  const out = {};
+  PAR_TYPES.forEach(pt => { out[pt.key] = byPar[pt.par].length ? mean(byPar[pt.par]) : null; });
+  return out;
+}
+
 let kpiMode = 'rolling', kpiWindow = 5;
+// Overlay de "última ronda", activable por separado del modo de vista -- ver
+// la nota junto a sgShowLastRound (mismo mecanismo, aplicado aquí a las 14
+// tarjetas del grid y al gráfico de tipo de hoyo).
+let kpiShowLastRound = false;
 function renderKpiSection(rounds, holes, shots){
   document.getElementById('kpiWindowControl').style.display = kpiMode==='rolling' ? 'inline-flex' : 'none';
+  document.getElementById('kpiLastRoundToggleWrap').style.display = kpiMode==='yearly' ? 'none' : 'inline-flex';
+  syncToggleButton('kpiLastRoundToggle', kpiShowLastRound);
   const years = distinctYears(rounds);
   const caveat = document.getElementById('kpiCaveat');
   caveat.textContent = kpiMode === 'yearly'
     ? (years.length===2 ? `Comparación directa ${years[0]} vs. ${years[1]}, valor agregado sobre todos los hoyos/golpes de la selección.` : 'Hacen falta dos años distintos en la selección.')
-    : (kpiMode === 'monthly' ? 'Valor agregado por mes natural.' : `Valor agregado, media móvil de ${kpiWindow} rondas.`);
+    : kpiMode === 'monthly' ? 'Valor agregado por mes natural.'
+    : `Valor agregado, media móvil de ${kpiWindow} rondas.`;
 
   let periods = null;
   if (kpiMode !== 'yearly') periods = kpiPooledSeries(kpiMode, kpiWindow, rounds, holes, shots);
@@ -6369,18 +6916,26 @@ function renderKpiSection(rounds, holes, shots){
     const valEl = document.getElementById('kpiVal-'+def.key);
     const svg = document.getElementById('kpiChart-'+def.key);
     const tooltip = document.getElementById('kpiTooltip-'+def.key);
+    // Un def con `secondaryKey` (p.ej. wedgeAttackStrokes) solo existe para
+    // alimentar el tooltip de otra tarjeta vía KPI_DEFS.find más abajo -- no
+    // tiene su propio hueco en #kpiGrid, así que no hay elementos del DOM que
+    // buscar para él. Sin este guard, valEl/svg saldrían null y `svg.closest`
+    // reventaría.
+    if (!valEl || !svg || !tooltip) return;
     const wrap = svg.closest('.kpi-chart-wrap');
+    const secondaryDef = def.secondaryKey ? KPI_DEFS.find(d => d.key === def.secondaryKey) : null;
 
     if (!rounds.length) { valEl.textContent = '—'; valEl.className = 'kpi-value'; svg.innerHTML = ''; return; }
 
     if (kpiMode === 'yearly') {
       const st = kpiYearlyStat(def, holes, shots);
+      const stSecondary = secondaryDef ? kpiYearlyStat(secondaryDef, holes, shots) : null;
       const latest = kpiCalc(def, holes, shots);
       valEl.textContent = kpiFmtValue(def, latest);
       let deltaGood = null;
       if (st && st.p !== null) { const delta = st.meanB - st.meanA; deltaGood = def.higherIsBetter ? delta>0 : delta<0; }
       valEl.className = 'kpi-value' + (deltaGood===null ? '' : (deltaGood ? ' up' : ' down'));
-      drawMiniYearly({svg, tooltip, wrap, def, st, years});
+      drawMiniYearly({svg, tooltip, wrap, def, st, years, secondaryDef, stSecondary, width: def.chartWidth});
     } else {
       const isMonthly = kpiMode === 'monthly';
       const vals = periods.map(p=>p.values[def.key]).filter(v=>v!==null&&v!==undefined&&!Number.isNaN(v));
@@ -6389,7 +6944,13 @@ function renderKpiSection(rounds, holes, shots){
       let deltaGood = null;
       if (vals.length >= 2) { const delta = vals[vals.length-1]-vals[vals.length-2]; deltaGood = def.higherIsBetter ? delta>0 : delta<0; }
       valEl.className = 'kpi-value' + (deltaGood===null ? '' : (deltaGood ? ' up' : ' down'));
-      drawMiniLine({svg, tooltip, wrap, periods, def, isMonthly});
+      let lastRoundOverlay = null;
+      if (kpiShowLastRound && rounds.length) {
+        const lastRound = rounds[rounds.length-1];
+        lastRoundOverlay = {enabled:true, roundLabel:lastRoundOverlayLabel(lastRound), value: kpiLastRoundValue(def, rounds, holes, shots),
+          secondaryValue: secondaryDef ? kpiLastRoundValue(secondaryDef, rounds, holes, shots) : null};
+      }
+      drawMiniLine({svg, tooltip, wrap, periods, def, isMonthly, secondaryDef, width: def.chartWidth, lastRoundOverlay});
     }
   });
 
@@ -6415,7 +6976,11 @@ function renderKpiSection(rounds, holes, shots){
     } else {
       const isMonthly = kpiMode === 'monthly';
       const ptPeriods = computeParTypeSeries(kpiMode, kpiWindow, rounds, holes);
-      drawParTypeLine({svg, tooltip, wrap, periods: ptPeriods, isMonthly});
+      let lastRoundOverlay = null;
+      if (kpiShowLastRound && rounds.length) {
+        lastRoundOverlay = {enabled:true, roundLabel:lastRoundOverlayLabel(rounds[rounds.length-1]), valuesByKey: parTypeLastRoundValues(holes, rounds) || {}};
+      }
+      drawParTypeLine({svg, tooltip, wrap, periods: ptPeriods, isMonthly, lastRoundOverlay});
       const lastPeriod = ptPeriods.length ? ptPeriods[ptPeriods.length-1] : null;
       PAR_TYPES.forEach(pt => { if (legendVals[pt.key]) legendVals[pt.key].textContent = fmtSigned(lastPeriod ? lastPeriod.values[pt.key] : null, 2); });
     }
@@ -6432,6 +6997,7 @@ document.getElementById('kpiWindowControl').addEventListener('click', (e) => {
   document.querySelectorAll('#kpiWindowControl .seg-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active'); kpiWindow = parseInt(btn.dataset.window,10); render();
 });
+bindToggleButton('kpiLastRoundToggle', v => { kpiShowLastRound = v; });
 
 // ============================================================
 // Section: Rounds tab -- browsable round list + selected-round detail
@@ -8193,6 +8759,204 @@ initColumnToggle('courseHoleTable', 'course-holes', COURSE_HOLE_COL_GROUPS);
 // in the HTML, where it would always show the same season regardless of
 // when the page is actually opened.
 document.querySelectorAll('#clubDistSeasonControl .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.season === clubDistSeason));
+
+// ============================================================
+// Zoom con rueda del ratón sobre los ejes reales del gráfico (petición de
+// Pau, sept. 2026 -- corrige un primer intento que ampliaba visualmente el
+// SVG entero con un transform CSS: Pau lo probó y pidió en su lugar un
+// zoom de VERDAD, que reduzca el rango de valores mostrado y recalcule la
+// cuadrícula/etiquetas de eje para ese rango, como en cualquier gráfico
+// interactivo -- si un eje va de -5 a 5 y se amplía, el eje debe pasar a
+// mostrar, p.ej., -2 a 2 con sus propias líneas y valores, no una imagen
+// recortada de la misma gráfica de -5 a 5).
+//
+// Cada función drawXxxChart que soporta esto calcula su rango "completo"
+// (a partir de los datos, como siempre) y, si recibe un parámetro de zoom
+// en sus opts (zoomY/zoomR/zoomXY según el tipo de gráfico), lo usa en su
+// lugar -- un redibujado real, no un efecto visual. Al terminar, cada una
+// deja en `svg.__zoomInfo` lo necesario para que este mecanismo genérico
+// sepa: (a) qué rango se está viendo ahora mismo y cuál es el completo,
+// para poder invertir la posición del cursor a un valor de datos, y (b)
+// una función `redraw(zoomOverride)` que vuelve a llamar a la misma
+// drawXxxChart con los mismos datos de siempre pero un rango distinto (o
+// `null` para volver al completo). No hace falta ninguna lógica de zoom
+// aquí para gráficos que no dejan `__zoomInfo` (de barras, radar...): el
+// wheel simplemente no hace nada especial sobre ellos y la página
+// scrollea con normalidad.
+//
+// Tres formas de zoom según el tipo de gráfico:
+// - 'y' (drawLineChart/drawMiniLine/drawParTypeLine/drawStackedAreaChart):
+//   gráficos de líneas/área con un eje de valor continuo -- el zoom
+//   "apunta" hacia el valor bajo el cursor, igual que el zoom de un mapa.
+//   Estos mismos gráficos también soportan zoom horizontal (eje X, índice
+//   de periodo) cuando dejan xMin/xMax/fullXMin/fullXMax/padL/plotW en su
+//   __zoomInfo -- sobre el área de trazado, una sola rueda del ratón
+//   amplía AMBOS ejes a la vez, cada uno anclado a su propio valor bajo
+//   el cursor (el periodo en X, el valor en Y); sobre la franja de
+//   etiquetas de UN eje concreto (a la izquierda para Y, debajo para X),
+//   la rueda amplía SOLO ese eje, dejando el otro tal cual.
+// - 'r' (drawDispersionRings -- Approach/Short Game): radial, siempre
+//   centrado en la bandera -- el zoom acerca/aleja el radio máximo
+//   mostrado sin desplazar el centro, que es la referencia real aquí.
+// - 'xy' (drawFairwayDispersion -- Tee): dos dominios independientes
+//   (desvío lateral / distancia recorrida), ambos anclados a sus propias
+//   referencias fijas (centro de calle / tee) -- el zoom encoge los dos a
+//   la vez, mismo razonamiento que el radial.
+function computeZoomedSpan(curMin, curMax, fullMin, fullMax, dataAtCursor, deltaY){
+  // deltaY<0 (rueda hacia arriba/adelante) = zoom IN = el rango se ENCOGE,
+  // así que el factor debe ser <1 en ese caso -- SIN signo negativo aquí
+  // (a diferencia del zoom visual CSS descartado, donde deltaY<0 debía
+  // AUMENTAR una escala; aquí deltaY<0 debe DISMINUIR un rango, es la
+  // relación inversa).
+  const factor = Math.exp(deltaY * 0.0016);
+  const fullSpan = fullMax - fullMin;
+  const curSpan = curMax - curMin;
+  let newSpan = Math.min(fullSpan, Math.max(fullSpan*0.02, curSpan*factor));
+  let newMin = dataAtCursor - (dataAtCursor - curMin) * (newSpan/curSpan);
+  let newMax = newMin + newSpan;
+  if (newMin < fullMin) { newMax += (fullMin - newMin); newMin = fullMin; }
+  if (newMax > fullMax) { newMin -= (newMax - fullMax); newMax = fullMax; newMin = Math.max(newMin, fullMin); }
+  return {min:newMin, max:newMax};
+}
+
+function handleChartAxisWheel(wrap, svgEl, e){
+  const info = svgEl.__zoomInfo;
+  if (!info) return; // este gráfico no tiene zoom de ejes soportado (p.ej. barras/radar) -- deja pasar el scroll normal
+  e.preventDefault();
+  const rect = wrap.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const factor = Math.exp(e.deltaY * 0.0016); // ver nota de signo en computeZoomedSpan
+  if (info.kind === 'y') {
+    // Con el cursor sobre la franja de etiquetas de UN eje (a la izquierda
+    // del área de trazado para Y, debajo para X), la rueda amplía SOLO ese
+    // eje -- sobre el área de trazado en sí, amplía los dos a la vez, cada
+    // uno apuntando a su propio valor bajo el cursor (comportamiento
+    // anterior, sin cambios ahí).
+    const svgX = (e.clientX - rect.left) / rect.width * info.W;
+    const svgY = (e.clientY - rect.top) / rect.height * info.H;
+    const plotBottom = info.padT + info.plotH;
+    const hasX = info.xMin !== undefined;
+    const overYAxisLabels = svgX < info.padL && svgY <= plotBottom;
+    const overXAxisLabels = hasX && svgY > plotBottom && svgX >= info.padL;
+
+    let zoomY = {min: info.yMin, max: info.yMax};
+    let zoomX = hasX ? {min: info.xMin, max: info.xMax} : undefined;
+
+    if (!overXAxisLabels) {
+      const dataY = info.yMin + (info.yMax - info.yMin) * (plotBottom - svgY) / info.plotH;
+      zoomY = computeZoomedSpan(info.yMin, info.yMax, info.fullMin, info.fullMax, dataY, e.deltaY);
+    }
+    if (hasX && !overYAxisLabels) {
+      const dataX = info.xMin + (info.xMax - info.xMin) * (svgX - info.padL) / info.plotW;
+      zoomX = computeZoomedSpan(info.xMin, info.xMax, info.fullXMin, info.fullXMax, dataX, e.deltaY);
+    }
+    info.redraw({zoomY, zoomX});
+  } else if (info.kind === 'r') {
+    const newMax = Math.min(info.fullMax, Math.max(info.fullMax*0.05, info.ringMax*factor));
+    info.redraw(newMax);
+  } else if (info.kind === 'xy') {
+    const newX = Math.min(info.fullXDomain, Math.max(info.fullXDomain*0.05, info.xDomain*factor));
+    const newY = Math.min(info.fullYDomain, Math.max(info.fullYDomain*0.05, info.yDomain*factor));
+    info.redraw({xDomain:newX, yDomain:newY});
+  }
+}
+
+// Arrastrar para desplazar (pan) un gráfico ya ampliado -- estado del
+// arrastre en curso, compartido por todos los gráficos en vez de un
+// listener de mousemove/mouseup por gráfico (mucho más barato: un único
+// par de listeners en `document`, con la mayoría de los movimientos de
+// ratón de la página resueltos en una comprobación `if (!__axisPanState)
+// return` casi gratuita). Solo soportado en gráficos 'kind:y' (líneas/
+// área, los mismos que tienen zoom en ambos ejes) -- en los radiales/de
+// dos dominios (dispersión) no hay un "desplazar" con sentido, ya que
+// están anclados a una referencia fija (bandera/tee), no a un cursor.
+let __axisPanState = null;
+
+function handleChartAxisPanMove(e){
+  if (!__axisPanState) return;
+  const st = __axisPanState;
+  const info = st.svgEl.__zoomInfo;
+  if (!info || info.kind !== 'y') { __axisPanState = null; return; }
+  const dxSvg = (e.clientX - st.startClientX) / st.rectW * info.W;
+  const dySvg = (e.clientY - st.startClientY) / st.rectH * info.H;
+
+  // Mismo razonamiento que el zoom apuntado al cursor, pero desplazando en
+  // vez de encogiendo/ampliando el span: el nuevo mínimo/máximo es el de
+  // partida (al empezar el arrastre) más un delta en unidades de datos,
+  // convertido desde el desplazamiento en píxeles vía la escala
+  // píxeles-por-unidad de cada eje. En Y, arrastrar hacia abajo (dySvg>0)
+  // desplaza la ventana hacia valores más altos (el contenido "cae" con el
+  // cursor); en X, arrastrar hacia la derecha (dxSvg>0) desplaza la
+  // ventana hacia índices de periodo más bajos (el contenido se mueve a la
+  // derecha con el cursor).
+  const spanY = st.baseYMax - st.baseYMin;
+  const deltaY = dySvg * spanY / info.plotH;
+  let newYMin = st.baseYMin + deltaY, newYMax = st.baseYMax + deltaY;
+  if (newYMin < info.fullMin) { newYMax += (info.fullMin - newYMin); newYMin = info.fullMin; }
+  if (newYMax > info.fullMax) { newYMin -= (newYMax - info.fullMax); newYMax = info.fullMax; newYMin = Math.max(newYMin, info.fullMin); }
+
+  let zoomX;
+  if (info.xMin !== undefined) {
+    const spanX = st.baseXMax - st.baseXMin;
+    const deltaX = -dxSvg * spanX / info.plotW;
+    let newXMin = st.baseXMin + deltaX, newXMax = st.baseXMax + deltaX;
+    if (newXMin < info.fullXMin) { newXMax += (info.fullXMin - newXMin); newXMin = info.fullXMin; }
+    if (newXMax > info.fullXMax) { newXMin -= (newXMax - info.fullXMax); newXMax = info.fullXMax; newXMin = Math.max(newXMin, info.fullXMin); }
+    zoomX = {min:newXMin, max:newXMax};
+  }
+  info.redraw({zoomY:{min:newYMin, max:newYMax}, zoomX});
+}
+function endChartAxisPan(){
+  if (__axisPanState) { __axisPanState.wrap.style.cursor = ''; __axisPanState = null; }
+}
+document.addEventListener('mousemove', handleChartAxisPanMove);
+document.addEventListener('mouseup', endChartAxisPan);
+document.addEventListener('mouseleave', endChartAxisPan);
+
+function initChartAxisZoom(){
+  document.querySelectorAll('.chart-wrap, .kpi-chart-wrap').forEach(wrap => {
+    const svgEl = wrap.querySelector(':scope > svg');
+    if (!svgEl) return;
+    wrap.addEventListener('wheel', (e) => handleChartAxisWheel(wrap, svgEl, e), {passive:false});
+    // Doble clic para resetear el zoom al instante (además de poder
+    // desampliar con la rueda hasta volver al rango completo).
+    wrap.addEventListener('dblclick', () => { if (svgEl.__zoomInfo) svgEl.__zoomInfo.redraw(null); });
+    // Clic y arrastre para desplazar el rango visible una vez ampliado --
+    // ver __axisPanState arriba. Sin zoom activo, el arrastre igualmente
+    // "funciona" pero queda enseguida recortado de vuelta al rango
+    // completo (que es donde ya estaba), así que no hace falta comprobar
+    // aquí si el gráfico está ampliado.
+    wrap.addEventListener('mousedown', (e) => {
+      const info = svgEl.__zoomInfo;
+      if (!info || info.kind !== 'y' || e.button !== 0) return;
+      e.preventDefault();
+      const rect = wrap.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      __axisPanState = {
+        wrap, svgEl,
+        startClientX: e.clientX, startClientY: e.clientY,
+        baseXMin: info.xMin, baseXMax: info.xMax, baseYMin: info.yMin, baseYMax: info.yMax,
+        rectW: rect.width, rectH: rect.height,
+      };
+      wrap.style.cursor = 'grabbing';
+    });
+    // Cursor "mano" en vez del "lupa" por defecto (CSS) sobre gráficos que
+    // sí admiten arrastre, como pista de que se puede hacer clic y mover --
+    // se decide en el momento (no al iniciar la página) porque __zoomInfo
+    // no existe hasta que el gráfico se dibuja por primera vez.
+    wrap.addEventListener('mouseenter', () => {
+      if (__axisPanState && __axisPanState.wrap === wrap) return;
+      const info = svgEl.__zoomInfo;
+      wrap.style.cursor = (info && info.kind === 'y') ? 'grab' : '';
+    });
+    wrap.addEventListener('mouseleave', () => {
+      if (__axisPanState && __axisPanState.wrap === wrap) return;
+      wrap.style.cursor = '';
+    });
+  });
+}
+initChartAxisZoom();
+
 render();
 
 </script>
