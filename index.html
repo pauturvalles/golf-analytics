@@ -1101,6 +1101,9 @@
           <button class="seg-btn active" data-window="10">10 rondas</button>
           <button class="seg-btn" data-window="20">20 rondas</button>
         </div>
+        <div class="seg-control" id="hcpLastRoundToggleWrap">
+          <button class="seg-btn" id="hcpLastRoundToggle" type="button" data-active="false">★ Última ronda</button>
+        </div>
       </div>
       <div class="chart-wrap" id="hcpChartWrap">
         <svg id="hcpChart" viewBox="0 0 900 340" width="100%" style="overflow:visible;display:block"></svg>
@@ -8506,7 +8509,16 @@ const HCP_LOW_COUNT_RULE = {
 //     tendría en un club/federación. Independiente del selector de
 //     ventana: el WHS real no se recalcula sobre ventanas arbitrarias,
 //     siempre mira las últimas hasta 20 tarjetas aceptables.
-let hcpWindow = '10'; // '1' | '3' | '5' | '10' -- solo afecta a "Nivel jugado"
+let hcpWindow = '10'; // '1' | '3' | '5' | '10' | '20' -- solo afecta a "Nivel jugado"
+// Overlay "★ Última ronda" del gráfico de "Nivel jugado" (ver
+// drawLineChart/lastRoundOverlay, mismo mecanismo que sgShowLastRound) --
+// a petición de Pau, para comparar el diferencial de la ronda más reciente
+// contra la media móvil de las anteriores. Solo tiene sentido con ventana
+// >= 3 rondas (con ventana de 1 el gráfico ya ES el diferencial ronda a
+// ronda, así que el punto y la estrella siempre coincidirían) -- el botón
+// se oculta para hcpWindow==='1' en renderNivelJugadoChart, igual que
+// sgLastRoundToggleWrap se oculta en modo "Por año".
+let hcpShowLastRound = false;
 // Ronda virtual inicial: entrada sintética de la pestaña "Handicap" de la
 // hoja de cálculo de Pau (fila "RESULTADO VIRTUAL INICIAL"), el punto de
 // partida desde el que empezó a llevar su hándicap antes de tener
@@ -8615,10 +8627,29 @@ function renderNivelJugadoChart(){
       ? 'Diferencial de la última ronda jugada.'
       : `Media móvil de las últimas ${hcpWindow} rondas.`;
   }
+  // El overlay solo aporta algo con ventana >= 3 (ver nota junto a
+  // hcpShowLastRound) -- se oculta el botón, no se resetea su estado, para
+  // que reaparezca como estaba si Pau vuelve a una ventana >= 3.
+  const hcpLastRoundAllowed = hcpWindow !== '1';
+  document.getElementById('hcpLastRoundToggleWrap').style.display = hcpLastRoundAllowed ? 'inline-flex' : 'none';
+  syncToggleButton('hcpLastRoundToggle', hcpShowLastRound);
+  let lastRoundOverlay = null;
+  if (hcpLastRoundAllowed && hcpShowLastRound && DATA.rounds.length) {
+    // "Nivel jugado" ignora los filtros de Año/Campo/Tee (ver nota arriba),
+    // así que la "última ronda" aquí es siempre la más reciente de TODO el
+    // histórico (DATA.rounds, orden cronológico), no la última de `rounds`
+    // filtradas -- igual que hace computeNivelJugadoPeriods.
+    const idx = DATA.rounds.length - 1;
+    const lastRound = DATA.rounds[idx];
+    const diff = scoreDifferentialForRound(lastRound, idx);
+    if (diff !== null) {
+      lastRoundOverlay = {enabled:true, roundLabel:lastRoundOverlayLabel(lastRound), valuesByKey:{nivel: diff}};
+    }
+  }
   drawLineChart({
     svg, legend, tooltip, wrap, periods,
     series: [{key:'nivel', label:'Nivel jugado', cssVar:'--tee'}],
-    isMonthly: false, fmtVal: v => v.toFixed(1),
+    isMonthly: false, fmtVal: v => v.toFixed(1), lastRoundOverlay,
   });
   syncWindowControl('hcpWindowControl', hcpWindow);
 }
@@ -8733,6 +8764,7 @@ bindWindowControl('cataWindowControl', v => { cataWindow = v; });
 bindWindowControl('holesWindowControl', v => { holesWindow = v; });
 bindWindowControl('bestHolesWindowControl', v => { holesWindow = v; });
 bindWindowControl('hcpWindowControl', v => { hcpWindow = v; });
+bindToggleButton('hcpLastRoundToggle', v => { hcpShowLastRound = v; });
 bindHcpTooltip('hcpOfficialValueWrap', 'hcpOfficialTooltip', 'hcpOfficialDisplay');
 bindWindowControl('lrsWindowControl', v => { lrsWindow = v; });
 bindWindowControl('roundCmpWindowControl', v => { roundCmpWindow = v; });
