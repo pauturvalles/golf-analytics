@@ -620,6 +620,12 @@
   .mistake-tile .num { font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:22px; }
   .mistake-tile .label { font-size:12px; color:var(--muted); margin-top:4px; line-height:1.4; }
   .mistake-tile.has-detail { cursor: help; }
+  /* Trigger interior para el tooltip de "vs la ronda anterior" en las
+     tarjetas KPI de última ronda -- a diferencia de .mistake-tile.has-detail
+     (toda la caja es el hotspot), aquí Pau pidió que el tooltip solo salte
+     al pasar por encima de esta línea concreta, no en cualquier punto de la
+     tarjeta (ver bindMistakeTileTooltips, parámetro triggerSelector). */
+  .lrs-prev-trigger { cursor: help; }
 
   /* Hover detail for the mistake tiles (Hoyo/Golpe/Palo de cada error). The
      tooltip is positioned via JS relative to .mistake-wrap rather than
@@ -1161,7 +1167,10 @@
       <div class="legend" id="lastRoundRadarLegend" style="justify-content:center"></div>
       <span class="win-note" id="lastRoundRadarNote" style="display:block;margin:4px 0 18px;max-width:70ch"></span>
 
-      <div id="lastRoundDeltas"></div>
+      <div class="mistake-wrap">
+        <div id="lastRoundDeltas"></div>
+        <div class="chart-tooltip mistake-tooltip" id="lastRoundPrevTooltip"></div>
+      </div>
     </div>
   </section>
 
@@ -3681,6 +3690,26 @@ function lrsBaselineLabel(n, windowState){
 // earlier round of changes and asked to merge them back: he doesn't want
 // different windows for the two views of the same underlying comparison.
 let lrsWindow = 'recent10'; // 'recent1' | 'recent3' | 'recent5' | 'recent10' | 'all' -- baseline window for this comparison
+// Contenido del tooltip de "vs la ronda anterior" (ver renderLastRoundDeltas):
+// el mismo bloque para las 8 tarjetas, ya que todas comparan contra la misma
+// ronda concreta -- fecha, campo, resultado y diferencial de esa ronda, para
+// que la comparación nunca sea una caja negra (mismo principio que
+// chartTooltipRoundsHtml en los gráficos de línea).
+function prevRoundDetailRows(prevRound){
+  if (!prevRound) return '';
+  const course = prevRound.c + (prevRound.nh===9 ? ' 9h' : '') + (prevRound.tc ? ' 🏆' : '');
+  const diff = scoreDifferentialForRound(prevRound, prevRound.idx);
+  const rows = [
+    ['Fecha', fmtDateShort(prevRound.d)],
+    ['Campo', course],
+    ['Gross', prevRound.gr],
+    ['Net', prevRound.net],
+    ['Stableford', `${prevRound.stb} pts`],
+    ['SG Total', fmtSigned(prevRound.sg_total, 2)],
+    ['Diferencial', (diff===null || diff===undefined) ? '—' : fmtPlain(diff, 1)],
+  ];
+  return rows.map(([l, v]) => `<div class="mt-row"><span>${l}</span><span>${v}</span></div>`).join('');
+}
 function renderLastRoundDeltas(rounds, byRoundSg, byRoundExtra){
   syncWindowControl('lrsWindowControl', lrsWindow);
   const container = document.getElementById('lastRoundDeltas');
@@ -3689,36 +3718,46 @@ function renderLastRoundDeltas(rounds, byRoundSg, byRoundExtra){
     container.innerHTML = `<p class="lrs-deltas-note">Hace falta al menos una ronda anterior en esta selección para poder comparar.</p>`;
     return;
   }
-  const baselineLabel = lrsBaselineLabel(deltas.baselineCount, deltas.windowState);
-  const prevLabel = lastRoundOverlayLabel(deltas.prevRound);
-  // Diseño corregido a petición de Pau (versión anterior tenía la ventana en
-  // grande y la ronda de hoy en pequeño -- invertido sin que se diera cuenta
-  // en un cambio previo). Ahora:
-  // - Número GRANDE = la ronda de hoy, coloreado verde/rojo según compare
-  //   contra la ventana elegida en el selector de arriba (deltaGood).
+  // Diseño (2 correcciones de Pau sobre la versión anterior):
+  // - Número GRANDE = ahora el DELTA de la ronda de hoy vs la ventana
+  //   elegida arriba (antes mostraba el valor absoluto de hoy, coloreado
+  //   según la ventana pero sin que la cifra en sí cambiara al mover el
+  //   selector -- Pau lo detectó como "no se recalcula" -- ahora la propia
+  //   cifra es fmtLastRoundDelta(d.deltaRaw), que sí depende de baselineMean
+  //   y por tanto de lrsWindow).
   // - Número PEQUEÑO = delta de la ronda de hoy vs la ronda inmediatamente
-  //   anterior en esta misma selección (no la ventana), también coloreado
-  //   verde/rojo, con la etiqueta fecha·campo de esa ronda concreta.
-  const tile = d => {
+  //   anterior en esta misma selección (no la ventana), coloreado igual que
+  //   antes. Consolidado hace una ronda de cambios en una sola línea (ver
+  //   nota histórica: convivía con una segunda línea que en cuanto la
+  //   ventana quedaba en 1 ronda mostraba el mismo dato dos veces).
+  // - El tooltip con el detalle de esa ronda anterior (fecha, campo, gross,
+  //   net, stableford, SG total, diferencial) ahora solo se dispara al
+  //   pasar por ENCIMA DE ESA LÍNEA PEQUEÑA (.lrs-prev-trigger), no en
+  //   cualquier punto de la tarjeta -- Pau lo pidió tras notar que saltaba
+  //   en toda la caja. bindMistakeTileTooltips soporta esto vía su 5º
+  //   parámetro opcional (triggerSelector): sigue posicionando el tooltip
+  //   respecto a la tarjeta entera, pero solo lo activa ese elemento interior.
+  const prevDetailHtml = prevRoundDetailRows(deltas.prevRound);
+  const tile = (d, tileIdx) => {
     const hasDelta = d.deltaRaw !== null;
-    const hasBaseline = d.baselineMean !== null && d.baselineMean !== undefined;
     const bigColor = hasDelta ? (d.deltaGood>=0 ? 'var(--good)' : 'var(--critical)') : 'var(--ink-2)';
     const bigArrow = hasDelta ? (d.deltaGood>=0?'▲':'▼') : '';
+    const bigText = hasDelta ? fmtLastRoundDelta(d.unit, d.deltaRaw) : '—';
     const countSuffix = (d.count!==null && d.count!==undefined) ? ` (${d.count} golpe${d.count===1?'':'s'})` : '';
     const hasPrevDelta = d.deltaVsPrevRaw !== null;
     const smallColor = hasPrevDelta ? (d.deltaVsPrevGood>=0 ? 'var(--good)' : 'var(--critical)') : 'var(--ink-2)';
     const smallArrow = hasPrevDelta ? (d.deltaVsPrevGood>=0?'▲':'▼') : '';
     return `
-    <div class="lrs-kpi-tile">
+    <div class="lrs-kpi-tile" data-tile="${tileIdx}">
       <span class="lrs-kpi-label">${d.label}</span>
-      <span class="lrs-kpi-delta" style="color:${bigColor}">${bigArrow} ${fmtLastRoundValue(d.unit, d.lastVal)}${countSuffix}</span>
-      <span class="lrs-kpi-sub">${hasBaseline ? `vs ${baselineLabel}: ${fmtLastRoundDelta(d.unit, d.deltaRaw)}` : 'sin histórico suficiente para comparar'}</span>
-      <span class="lrs-kpi-sub">vs ${prevLabel}: <span style="color:${smallColor}">${hasPrevDelta ? `${smallArrow} ${fmtLastRoundDelta(d.unit, d.deltaVsPrevRaw)}` : '—'}</span></span>
+      <span class="lrs-kpi-delta" style="color:${bigColor}">${bigArrow} ${bigText}${countSuffix}</span>
+      <span class="lrs-kpi-sub lrs-prev-trigger" tabindex="0">vs la ronda anterior: <span style="color:${smallColor}">${hasPrevDelta ? `${smallArrow} ${fmtLastRoundDelta(d.unit, d.deltaVsPrevRaw)}` : '—'}</span></span>
     </div>`;
   };
   container.innerHTML = `
     <p class="lrs-deltas-head">Cómo compara la ronda de hoy</p>
     <div class="lrs-kpi-grid">${deltas.metrics.map(tile).join('')}</div>`;
+  bindMistakeTileTooltips(container, deltas.metrics.map(() => ({detail: prevDetailHtml})), 'lastRoundPrevTooltip', '.lrs-kpi-tile', '.lrs-prev-trigger');
 }
 
 // ============================================================
@@ -7453,7 +7492,16 @@ function threeputtDetailRows(threeputtHoles, rHoles){
 // the exact same overflow:hidden-for-rounded-corners issue as .mistake-grid,
 // so the same JS-positioned-tooltip approach applies unchanged; only the
 // tile selector differs.
-function bindMistakeTileTooltips(container, tiles, tooltipId, tileSelector){
+// `triggerSelector` (optional, 5th param): by default the whole tile is the
+// hover/focus trigger (mistake tiles, "Palo del día" -- entire box is the
+// clickable/hoverable unit, unchanged). Pau found that too eager for the
+// last-round-deltas KPI grid, where only the small "vs la ronda anterior"
+// sub-line should react -- passing a selector scopes mouseenter/mouseleave/
+// focus/blur to that inner element (`tile.querySelector(triggerSelector)`)
+// while positioning still keys off the outer tile's own rect, so the
+// tooltip still appears anchored to the tile itself, just triggered by a
+// smaller hotspot inside it.
+function bindMistakeTileTooltips(container, tiles, tooltipId, tileSelector, triggerSelector){
   const tipEl = document.getElementById(tooltipId);
   const wrapEl = container.closest('.mistake-wrap');
   if (!tipEl || !wrapEl) return;
@@ -7467,10 +7515,11 @@ function bindMistakeTileTooltips(container, tiles, tooltipId, tileSelector){
   const hide = () => { tipEl.style.opacity = 0; };
   container.querySelectorAll(tileSelector || '.mistake-tile.has-detail').forEach(tile => {
     const detail = tiles[Number(tile.dataset.tile)].detail;
-    tile.addEventListener('mouseenter', () => show(tile, detail));
-    tile.addEventListener('mouseleave', hide);
-    tile.addEventListener('focus', () => show(tile, detail));
-    tile.addEventListener('blur', hide);
+    const trigger = (triggerSelector && tile.querySelector(triggerSelector)) || tile;
+    trigger.addEventListener('mouseenter', () => show(tile, detail));
+    trigger.addEventListener('mouseleave', hide);
+    trigger.addEventListener('focus', () => show(tile, detail));
+    trigger.addEventListener('blur', hide);
   });
 }
 
