@@ -7790,12 +7790,24 @@ function renderRoundHoleTable(rHoles, rShots){
     tbody.innerHTML = `<tr class="empty-row"><td colspan="${ROUND_HOLE_TABLE_COLS}">No hay datos de hoyos para esta ronda con esta selección.</td></tr>`;
     return;
   }
+  const selectedIdx = rHoles[0].r;
   const sgByHole = {};
   rShots.forEach(s => { if (s.sg!==null && s.sg!==undefined) sgByHole[s.h] = (sgByHole[s.h]||0) + s.sg; });
   const rows = rHoles.map(h => {
     const agg = HOLE_AGG_FULL_MAP[h.rc+'|'+h.rh];
     const vsExpected = (agg && agg.expected!==null) ? h.g - agg.expected : null;
-    const vsHist = (agg && agg.times>=2) ? h.g - agg.avgScore : null;
+    // Vs Histórico: SIEMPRE contra otras visitas a este mismo hoyo físico,
+    // excluyendo la propia ronda seleccionada -- reportado por Pau: usar
+    // agg.avgScore tal cual (que SÍ incluye la ronda actual, correcto para
+    // su otro uso en "Hoyos que se repiten", donde no hay una ronda
+    // "actual" que excluir) diluía el diferencial -- con solo 1 visita
+    // previa, el promedio pasaba a ser (previa+hoy)/2 y la diferencia
+    // mostrada salía a la mitad de la real (p.ej. -2.50 en vez de -5.00),
+    // en vez de un entero. Recalculado aquí aparte, siempre contra el
+    // histórico COMPLETO (DATA.holes, sin el filtro Año/Campo/Tee de la
+    // pestaña) igual que hace HOLE_AGG_FULL_MAP para todo lo demás.
+    const otherInstances = DATA.holes.filter(x => x.rc===h.rc && x.rh===h.rh && x.r!==selectedIdx);
+    const vsHist = otherInstances.length ? h.g - mean(otherInstances.map(x=>x.g)) : null;
     return {h, sg: (sgByHole[h.h]===undefined ? null : sgByHole[h.h]), vsExpected, vsHist};
   });
   const sortedRows = sortRows('roundHoleBody', rows, ROUND_HOLE_SORT_COLUMNS);
