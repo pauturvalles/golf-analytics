@@ -1218,6 +1218,14 @@
       <h2><span class="tip-trigger" tabindex="0"><span>Métricas clave a mejorar</span><span class="info-dot">i</span><span class="info-tooltip">13 indicadores que resumen las cuatro fases del juego, agregados sobre todos los hoyos/golpes de la selección. Mismo selector de vista que el resto del dashboard. El número grande es el periodo más reciente de su mini-gráfico, coloreado en <b style="color:var(--good)">verde</b> cuando mejora respecto al periodo anterior y en <b style="color:var(--critical)">rojo</b> cuando empeora — es un juicio sobre la dirección del cambio, no sobre si el valor en sí es "bueno".</span></span></h2>
     </div>
     <div class="card">
+      <div class="table-scroll" style="margin-bottom:22px">
+        <table class="club-table" id="kpiSummaryTable">
+          <thead>
+            <tr><th>Métrica <span class="tip-trigger" tabindex="0"><span class="info-dot">i</span><span class="info-tooltip">Última ronda de esta selección vs. la ronda inmediatamente anterior (siempre esta comparación fija, independiente del selector de vista de las gráficas de abajo). Ordenado de mayor mejora a mayor empeoramiento.</span></span></th><th class="num">Última ronda</th><th class="num">Ronda anterior</th><th class="num">Diferencia</th></tr>
+          </thead>
+          <tbody id="kpiSummaryBody"></tbody>
+        </table>
+      </div>
       <div class="controls-row">
         <div class="seg-control" id="kpiModeControl">
           <button class="seg-btn active" data-mode="rolling">Media móvil</button>
@@ -3265,8 +3273,8 @@ function drawYearlyBars(opts){
         tooltip.innerHTML = `<div style="opacity:0.7;margin-bottom:3px">${s.label} · ${bar.label}</div><div>${fmtVal(bar.val)}</div>`;
         tooltip.style.opacity = 1;
         const wrapRect = wrap.getBoundingClientRect();
-        tooltip.style.left = ((bar.x - padL)/plotW * wrapRect.width + barW/2) + 'px';
-        tooltip.style.top = (top/H*wrapRect.height) - 46 + 'px';
+        tooltip.style.left = clampTooltipLeft(tooltip, wrapRect, (bar.x - padL)/plotW * wrapRect.width + barW/2) + 'px';
+        tooltip.style.top = clampTooltipTop(tooltip, wrapRect, (top/H*wrapRect.height) - 46) + 'px';
       });
       rect.addEventListener('mouseleave', () => tooltip.style.opacity = 0);
       svg.appendChild(rect);
@@ -3912,7 +3920,7 @@ function renderRoundRadarChart(ids, data, windowState){
       tooltip.style.opacity = 1;
       const wrapRect = wrap.getBoundingClientRect();
       tooltip.style.left = clampTooltipLeft(tooltip, wrapRect, (p.x/W)*wrapRect.width) + 'px';
-      tooltip.style.top = (p.y/H)*wrapRect.height - 50 + 'px';
+      tooltip.style.top = clampTooltipTop(tooltip, wrapRect, (p.y/H)*wrapRect.height - 50) + 'px';
     });
     hit.addEventListener('mouseleave', () => { tooltip.style.opacity = 0; });
     svg.appendChild(hit);
@@ -5283,7 +5291,7 @@ function renderClubDistanceChart(shots){
       tooltip.style.opacity = 1;
       const wrapRect = wrap.getBoundingClientRect();
       tooltip.style.left = clampTooltipLeft(tooltip, wrapRect, xAt(s.median)/W * wrapRect.width) + 'px';
-      tooltip.style.top = (y/H * wrapRect.height) - 50 + 'px';
+      tooltip.style.top = clampTooltipTop(tooltip, wrapRect, (y/H * wrapRect.height) - 50) + 'px';
     });
     hit.addEventListener('mouseleave', () => { tooltip.style.opacity = 0; });
     svg.appendChild(hit);
@@ -5798,7 +5806,7 @@ function drawDispersionRings(opts){
       tooltip.style.opacity = 1;
       const wrapRect = wrap.getBoundingClientRect();
       tooltip.style.left = clampTooltipLeft(tooltip, wrapRect, x/W * wrapRect.width) + 'px';
-      tooltip.style.top = Math.max(0, (y/H * wrapRect.height) - 60) + 'px';
+      tooltip.style.top = clampTooltipTop(tooltip, wrapRect, (y/H * wrapRect.height) - 60) + 'px';
     });
     dot.addEventListener('mouseleave', () => { tooltip.style.opacity = 0; });
     svg.appendChild(dot);
@@ -6081,7 +6089,7 @@ function drawFairwayDispersion(opts){
       tooltip.style.opacity = 1;
       const wrapRect = wrap.getBoundingClientRect();
       tooltip.style.left = clampTooltipLeft(tooltip, wrapRect, x/W * wrapRect.width) + 'px';
-      tooltip.style.top = Math.max(0, (y/H * wrapRect.height) - 60) + 'px';
+      tooltip.style.top = clampTooltipTop(tooltip, wrapRect, (y/H * wrapRect.height) - 60) + 'px';
     });
     dot.addEventListener('mouseleave', () => { tooltip.style.opacity = 0; });
     svg.appendChild(dot);
@@ -6844,8 +6852,8 @@ function drawParTypeYearly(opts){
         tooltip.innerHTML = `<div style="opacity:0.7;margin-bottom:3px">${pt.label} · ${b.label}</div><div>${fmtSigned(b.val,2)}</div>`;
         tooltip.style.opacity = 1;
         const wrapRect = wrap.getBoundingClientRect();
-        tooltip.style.left = (b.x/W*wrapRect.width) + 'px';
-        tooltip.style.top = '0px';
+        tooltip.style.left = clampTooltipLeft(tooltip, wrapRect, b.x/W*wrapRect.width) + 'px';
+        tooltip.style.top = clampTooltipTop(tooltip, wrapRect, 0) + 'px';
       });
       rect.addEventListener('mouseleave', () => tooltip.style.opacity = 0);
       svg.appendChild(rect);
@@ -6867,7 +6875,23 @@ function drawParTypeYearly(opts){
 // tarjeta pequeño), un margen fijo insuficiente dejaba el tooltip de la
 // estrella "Última ronda" cortado en el borde derecho cuando su contenido
 // (fecha + valor + métrica secundaria) era más ancho que el margen.
+// El propio contenido del tooltip nunca debe ser más ancho que el wrap que
+// lo recorta (.chart-wrap/.kpi-chart-wrap tienen overflow:hidden por el
+// zoom con rueda) -- si lo es, NINGUNA posición evita que se corte
+// visualmente, por ancho que sea el desplazamiento. Reportado por Pau en
+// las mini-gráficas del grid de KPIs en móvil (wrap de ~150-170px, más
+// estrecho que el tooltip a una sola línea), y en menor medida en
+// escritorio con tooltips ya de por sí largos (p.ej. listas de golpes/
+// rondas) cerca del borde de un gráfico ancho. Se fuerza un max-width
+// acorde al wrap (mismo margen de 4px que usa el propio clamp) y se permite
+// el salto de línea ANTES de medir offsetWidth, para que un tooltip que no
+// cabe en una sola línea se parta en varias dentro del hueco disponible en
+// vez de desbordar -- clampTooltipTop, llamado justo después en todos los
+// sitios que usan este helper, ya mide offsetHeight DESPUÉS de este cambio,
+// así que ve la altura ya crecida por el salto de línea.
 function clampTooltipLeft(tooltip, wrapRect, xPx){
+  tooltip.style.maxWidth = Math.max(40, wrapRect.width - 8) + 'px';
+  tooltip.style.whiteSpace = 'normal';
   const tw = tooltip.offsetWidth || 140;
   let left = xPx + 8;
   if (left + tw > wrapRect.width - 4) left = xPx - tw - 8;
@@ -7097,8 +7121,8 @@ function drawMiniYearly(opts){
       tooltip.innerHTML = `<div style="opacity:0.7;margin-bottom:3px">${b.label}</div><div>${kpiFmtValue(def, b.val)}</div>${secondaryRow}`;
       tooltip.style.opacity = 1;
       const wrapRect = wrap.getBoundingClientRect();
-      tooltip.style.left = ((b.x-padL)/plotW*wrapRect.width) + 'px';
-      tooltip.style.top = '0px';
+      tooltip.style.left = clampTooltipLeft(tooltip, wrapRect, (b.x-padL)/plotW*wrapRect.width) + 'px';
+      tooltip.style.top = clampTooltipTop(tooltip, wrapRect, 0) + 'px';
     });
     rect.addEventListener('mouseleave', () => tooltip.style.opacity = 0);
     svg.appendChild(rect);
@@ -7127,12 +7151,101 @@ function parTypeLastRoundValues(holes, rounds){
   return out;
 }
 
+// Misma lógica de redondeo-consistente que metricDelta (el resto del
+// dashboard): para '%' la diferencia se calcula sobre los valores YA
+// REDONDEADOS tal y como se muestran (kpiFmtValue redondea a entero), para
+// que la cifra de "Diferencia" siempre cuadre con la resta de los dos
+// números realmente pintados en pantalla -- el resto de unidades de
+// KPI_DEFS (m/sgSigned/strokes) ya se muestran a precisión fija, así que ahí
+// la resta cruda no puede desajustarse de lo mostrado.
+function kpiMetricDelta(def, last, prev){
+  if (last===null || last===undefined || Number.isNaN(last) || prev===null || prev===undefined || Number.isNaN(prev)) return null;
+  return def.unit === 'pct' ? Math.round(last) - Math.round(prev) : last - prev;
+}
+// Mismo formato que kpiFmtValue pero siempre con signo -- para la columna
+// "Diferencia" de la tablita resumen (ver renderKpiSummaryTable). Misma
+// unidad que el propio valor (Pau: nada de "pts" para un %, la unidad tiene
+// que ser la misma que en las otras dos columnas).
+function kpiFmtDelta(def, v){
+  if (v===null || v===undefined || Number.isNaN(v)) return '—';
+  if (def.unit === 'm') return fmtSigned(v,1)+'m';
+  if (def.unit === 'sgSigned') return fmtSigned(v,2);
+  if (def.unit === 'strokes') return fmtSigned(v,1);
+  return fmtSigned(v,0)+'%';
+}
+// Tablita-resumen que antecede a las 14 tarjetas de #kpiGrid (a petición de
+// Pau: "cuesta analizar de primeras" el grid completo de golpe) -- MISMAS
+// métricas que las tarjetas (KPI_DEFS, sin contar wedgeAttackFinishSg que no
+// tiene tarjeta propia, y sin el gráfico de tipo de hoyo -- Par 3/4/5 -- que
+// no encaja en el mismo esquema de un único valor con higherIsBetter), pero
+// siempre última ronda vs. ronda inmediatamente anterior de esta selección,
+// SIN ligar al selector de vista (media móvil/mes/año) ni a su ventana --
+// ese selector sigue pilotando solo las gráficas de abajo, tal cual antes.
+// Ordenadas de mayor mejora a mayor empeoramiento (deltaGoodSigned
+// descendente): el signo de la diferencia ya viene normalizado por
+// higherIsBetter, así que un valor positivo siempre es "a mejor" para esa
+// métrica aunque la métrica en sí sea "menos es mejor" (p.ej. % de 3-putts
+// bajando se muestra en positivo/verde). Reutiliza kpiCalc (idéntica
+// definición que usa cada tarjeta) filtrando primero a los hoyos/golpes de
+// cada una de las dos rondas -- misma idea que kpiLastRoundValue, pero
+// necesitando ambas rondas a la vez en vez de solo la última.
+function renderKpiSummaryTable(rounds, holesAll, shotsAll){
+  const tbody = document.getElementById('kpiSummaryBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  if (rounds.length < 2) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="4">Hace falta al menos 2 rondas en esta selección para comparar.</td></tr>';
+    return;
+  }
+  const last = rounds[rounds.length-1], prev = rounds[rounds.length-2];
+  const lastHoles = holesAll.filter(h=>h.r===last.idx), lastShots = shotsAll.filter(s=>s.r===last.idx);
+  const prevHoles = holesAll.filter(h=>h.r===prev.idx), prevShots = shotsAll.filter(s=>s.r===prev.idx);
+
+  // Excluye el def que ES la secondaryKey de otro (p.ej. wedgeAttackFinishSg,
+  // apuntado por wedgeAttackStrokes.secondaryKey) -- ese es el que NO tiene
+  // tarjeta propia en #kpiGrid, no el que declara secondaryKey (wedgeAttackStrokes
+  // sí tiene su propia tarjeta y debe aparecer aquí).
+  const secondaryKeys = new Set(KPI_DEFS.map(d => d.secondaryKey).filter(Boolean));
+  const rows = KPI_DEFS.filter(def => !secondaryKeys.has(def.key)).map(def => {
+    const lastVal = kpiCalc(def, lastHoles, lastShots);
+    const prevVal = kpiCalc(def, prevHoles, prevShots);
+    const delta = kpiMetricDelta(def, lastVal, prevVal);
+    const deltaGoodSigned = delta===null ? null : (def.higherIsBetter ? delta : -delta);
+    return {def, lastVal, prevVal, delta, deltaGoodSigned};
+  });
+  // Con diferencia (deltaGoodSigned no nulo) primero, mejor a peor; las que
+  // no tienen datos suficientes para comparar (ronda sin ninguna ocasión de
+  // esa métrica) van al final, sin ordenar entre sí.
+  rows.sort((a,b) => {
+    if (a.deltaGoodSigned===null && b.deltaGoodSigned===null) return 0;
+    if (a.deltaGoodSigned===null) return 1;
+    if (b.deltaGoodSigned===null) return -1;
+    return b.deltaGoodSigned - a.deltaGoodSigned;
+  });
+
+  rows.forEach(row => {
+    const tr = document.createElement('tr');
+    // Número directamente coloreado (sin punto/chip), gris cuando la
+    // diferencia es EXACTAMENTE 0 -- a petición de Pau, para que se lea
+    // igual que el resto de tablas del dashboard (Vs Expected/Vs Histórico,
+    // tabla de comparación de rondas), que ya pintan el propio texto en vez
+    // de un punto aparte.
+    const deltaColor = (row.deltaGoodSigned===null || row.deltaGoodSigned===0) ? 'var(--muted)' : (row.deltaGoodSigned>0 ? 'var(--good)' : 'var(--critical)');
+    tr.innerHTML = `<td>${row.def.label}</td>`+
+      `<td class="num">${kpiFmtValue(row.def, row.lastVal)}</td>`+
+      `<td class="num">${kpiFmtValue(row.def, row.prevVal)}</td>`+
+      `<td class="num" style="color:${deltaColor}">${kpiFmtDelta(row.def, row.delta)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
 let kpiMode = 'rolling', kpiWindow = 5;
 // Overlay de "última ronda", activable por separado del modo de vista -- ver
 // la nota junto a sgShowLastRound (mismo mecanismo, aplicado aquí a las 14
 // tarjetas del grid y al gráfico de tipo de hoyo).
 let kpiShowLastRound = false;
 function renderKpiSection(rounds, holes, shots){
+  renderKpiSummaryTable(rounds, holes, shots);
   document.getElementById('kpiWindowControl').style.display = kpiMode==='rolling' ? 'inline-flex' : 'none';
   document.getElementById('kpiLastRoundToggleWrap').style.display = kpiMode==='yearly' ? 'none' : 'inline-flex';
   syncToggleButton('kpiLastRoundToggle', kpiShowLastRound);
