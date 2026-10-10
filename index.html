@@ -1573,7 +1573,7 @@
       </div>
 
       <div class="card">
-        <h3>Rendimiento por hoyo <span class="tip-trigger" tabindex="0"><span class="info-dot">i</span><span class="info-tooltip">Vs Expected / Vs Historical usan la misma metodología que "Hoyos que se repiten como problema" (Vs Expected = tu gross score menos una referencia externa de dificultad; Vs Historical = tu gross score menos tu media histórica real en ese hoyo físico), pero sin el mínimo de 4 repeticiones ni ventana de recencia &mdash; se muestra para cada hoyo jugado en esta ronda, aunque sea una sola vez (en cuyo caso Vs Historical muestra "&mdash;"). La tabla tiene scroll vertical propio con la cabecera fija.</span></span> <span class="win-note" id="roundHoleRoundLabel"></span></h3>
+        <h3>Rendimiento por hoyo <span class="tip-trigger" tabindex="0"><span class="info-dot">i</span><span class="info-tooltip">Vs Expected / Vs Historical usan la misma metodología que "Hoyos que se repiten como problema" (Vs Expected = tu gross score menos una referencia externa de dificultad, ajustada por el hándicap de campo de cada ronda; Vs Historical = tu gross score menos tu media histórica real en ese hoyo físico), pero sin el mínimo de 4 repeticiones ni ventana de recencia &mdash; se muestra para cada hoyo jugado en esta ronda, aunque sea una sola vez (en cuyo caso Vs Historical muestra "&mdash;"). La tabla tiene scroll vertical propio con la cabecera fija.</span></span> <span class="win-note" id="roundHoleRoundLabel"></span></h3>
         <div class="table-scroll table-scroll-v">
         <table class="round-hole-table">
           <colgroup>
@@ -1791,7 +1791,7 @@
           <button class="seg-btn active" data-window="all">Muestra completa</button>
         </div>
         <span class="win-note" id="holesWindowNote"></span>
-        <span class="tip-trigger" tabindex="0"><span class="info-dot">i</span><span class="info-tooltip"><b>Expected</b> = una expectativa de dificultad externa, no basada en cómo TÚ jugaste este hoyo: shrinkage entre (a) tu media histórica en otros hoyos con el mismo par y stroke index, y (b) tu media histórica en hoyos de ese mismo par — ambas EXCLUYENDO las rondas de este propio hoyo. weight = n/(n+10).<br><br><b>Avg Score</b> = tu media histórica real en este hoyo. <b>Vs Expected</b> = Avg Score &minus; Expected: positivo = peor de lo esperado, negativo = mejor. <b>Avg (last 3)</b> / <b>Trend</b> = media de las últimas 3 veces (o menos) menos Avg Score — negativo = mejorando. <b>Double+ %</b> = % de veces que este hoyo terminó en doble bogey o peor. <b>Blow-up Rate</b> = % de veces con score &ge; par+2; <b>Damage</b> = media de (score &minus; Expected) solo en esas ocasiones. Haz clic en cualquier cabecera de columna para ordenar.</span></span>
+        <span class="tip-trigger" tabindex="0"><span class="info-dot">i</span><span class="info-tooltip"><b>Expected</b> = lo que cabría esperar de ti en este hoyo según su dificultad y tu nivel de ese día, no basado en cómo TÚ jugaste este hoyo: shrinkage entre (a) tu media histórica en otros hoyos con el mismo par y la misma posición de dificultad, y (b) tu media histórica en hoyos de ese mismo par — ambas EXCLUYENDO las rondas de este propio hoyo. weight = n/(n+10).<br><br>Dos ajustes para que sea justo entre campos y épocas: (1) el stroke index se lleva a una escala común 1-9 (en rondas de 9 hoyos se reordena entre los 9 jugados; en las de 18 se usa ⌈SI/2⌉), porque Altea y La Sella usan SI 1-9 y el resto 1-18; (2) cada score se ajusta con el hándicap de campo de su ronda ÷ 18 (el que metes en Shot Scope, que combina la dificultad del campo y tu nivel de ese momento) — se resta al comparar y se suma el de la ronda evaluada. La columna SI muestra el SI original.<br><br><b>Avg Score</b> = tu media histórica real en este hoyo. <b>Vs Expected</b> = Avg Score &minus; Expected: positivo = peor de lo esperado, negativo = mejor. <b>Avg (last 3)</b> / <b>Trend</b> = media de las últimas 3 veces (o menos) menos Avg Score — negativo = mejorando. <b>Double+ %</b> = % de veces que este hoyo terminó en doble bogey o peor. <b>Blow-up Rate</b> = % de veces con score &ge; par+2; <b>Damage</b> = media de (score &minus; Expected) solo en esas ocasiones. Haz clic en cualquier cabecera de columna para ordenar.</span></span>
         <div id="holesTableColToggleAnchor" style="margin-left:auto"></div>
       </div>
       <div class="table-scroll">
@@ -4502,29 +4502,71 @@ bindToggleButton('puttLastRoundToggle', v => { puttShowLastRound = v; });
 // ============================================================
 // Section: Hole recurrence (problem holes + best holes)
 // ============================================================
-// Expected-score methodology (Pau's spec): for a physical hole H with a given
-// (par, stroke_index) INSTANCE (si can differ across plays of the same
-// physical hole when La Sella's loops are combined differently -- see the
-// project doc), the "external" difficulty reference is a shrinkage blend of
-// (a) the historical gross-score mean of every OTHER hole-instance dataset-
-// wide sharing that exact (par,si) pair, and (b) the historical gross-score
-// mean of every OTHER hole-instance sharing just that par. Both pools
-// EXCLUDE this physical hole's own instances -- otherwise a hole's own
-// history would leak into its own difficulty reference, and a hole that's
-// simply been played badly would look "exactly as hard as expected" by
-// construction. weight = n/(n+10), n = size of the (par,si) pool.
+// Expected-score methodology (Pau's spec, rediseñada en octubre 2026): for a
+// physical hole H with a given (par, stroke_index) INSTANCE (si can differ
+// across plays of the same physical hole when La Sella's loops are combined
+// differently -- see the project doc), the "external" difficulty reference is
+// a shrinkage blend of (a) the historical gross-score mean of every OTHER
+// hole-instance dataset-wide sharing that exact (par, SI-en-escala-común)
+// pair, and (b) the historical gross-score mean of every OTHER hole-instance
+// sharing just that par. Both pools EXCLUDE this physical hole's own
+// instances -- otherwise a hole's own history would leak into its own
+// difficulty reference. weight = n/(n+10), n = size of the (par,si) pool.
+//
+// Dos correcciones (octubre 2026, a raíz de una pregunta de Pau -- ver el
+// changelog del proyecto), ambas para que el "esperado" deje de ser ciego al
+// campo y al momento:
+//  1. SI en ESCALA COMÚN 1-9. Altea y los recorridos de La Sella usan SI
+//     local 1-9; Jávea/Puig Campana/Oliva Nova en 9 hoyos usan SI estándar
+//     1-18 (1,3,5..17 o 2,4..18); las rondas de 18 usan 1-18. Mezclarlos en
+//     la misma clave par|si comparaba "3.º más difícil de 9" con "3.º de 18".
+//     Rondas de 9 hoyos: se reordena el SI entre los 9 hoyos jugados (1-9).
+//     Rondas de 18: ceil(SI/2) (dos hoyos por nivel). El SI mostrado en las
+//     tablas sigue siendo el original (h.si).
+//  2. OFFSET por hándicap de campo de la ronda: hcp/18 golpes por hoyo (el
+//     hcp que Pau mete en Shot Scope, siempre la cifra de 18 hoyos). Combina
+//     dificultad del campo (Slope/Valor de Campo) y el nivel de Pau en ese
+//     momento. Cada gross del pool se ajusta restándole el offset de SU
+//     ronda, y al esperado final de una instancia se le suma el offset de la
+//     ronda de ESA instancia. Sin esto, los hoyos jugados sobre todo en 2025
+//     (hcp ~21-27) salían "peor de lo esperado" solo por haberse jugado
+//     cuando Pau era peor (deriva medida: +0.30 -> -0.16 golpes/hoyo).
+let HOLE_MODEL = null; // clave 'ronda|hoyo' -> {siN, off}; construido una vez desde DATA.holes
+function ensureHoleModel(){
+  if (HOLE_MODEL) return HOLE_MODEL;
+  HOLE_MODEL = {};
+  const byRound = {};
+  DATA.holes.forEach(h => { (byRound[h.r] = byRound[h.r] || []).push(h); });
+  Object.keys(byRound).forEach(r => {
+    const rd = DATA.rounds[r];
+    const hs = byRound[r];
+    const hcp = (rd && typeof rd.hcp === 'number') ? rd.hcp : null;
+    const off = hcp === null ? 0 : hcp / 18;
+    if (rd && rd.nh === 9) {
+      hs.slice().sort((a,b) => a.si - b.si).forEach((h,i) => { HOLE_MODEL[h.r+'|'+h.h] = {siN: i+1, off}; });
+    } else {
+      hs.forEach(h => { HOLE_MODEL[h.r+'|'+h.h] = {siN: Math.ceil(h.si/2), off}; });
+    }
+  });
+  return HOLE_MODEL;
+}
+function holeModelOf(h){
+  const m = ensureHoleModel()[h.r+'|'+h.h];
+  return m || {siN: h.si, off: 0};
+}
 function buildExpectedScorePools(holes){
   const byParSi = {}, byPar = {};
   holes.forEach(h => {
     const holeKey = h.rc + '|' + h.rh;
-    const entry = {holeKey, gross: h.g};
-    const psKey = h.p + '|' + h.si;
+    const m = holeModelOf(h);
+    const entry = {holeKey, gross: h.g - m.off};
+    const psKey = h.p + '|' + m.siN;
     (byParSi[psKey] = byParSi[psKey] || []).push(entry);
     (byPar[h.p] = byPar[h.p] || []).push(entry);
   });
   return {
-    localMeanExcl(par, si, excludeHoleKey){
-      const arr = (byParSi[par+'|'+si] || []).filter(x => x.holeKey !== excludeHoleKey);
+    localMeanExcl(par, siN, excludeHoleKey){
+      const arr = (byParSi[par+'|'+siN] || []).filter(x => x.holeKey !== excludeHoleKey);
       return {mean: arr.length ? mean(arr.map(x=>x.gross)) : null, n: arr.length};
     },
     parMeanExcl(par, excludeHoleKey){
@@ -4562,15 +4604,25 @@ function computeHoleExpectedAgg(holes, includeIdxSet){
     const holeKey = g.rc + '|' + g.rh;
 
     const expByInstance = items.map(h => {
-      const loc = pools.localMeanExcl(h.p, h.si, holeKey);
+      const m = holeModelOf(h);
+      const loc = pools.localMeanExcl(h.p, m.siN, holeKey);
       const parM = pools.parMeanExcl(h.p, holeKey);
       if (loc.mean === null && parM === null) return null;
       const weight = loc.n / (loc.n + 10);
       const localComponent = loc.mean === null ? parM : loc.mean;
       const parComponent = parM === null ? loc.mean : parM;
-      return weight*localComponent + (1-weight)*parComponent;
+      // El pool está en golpes "netos de nivel/campo" (gross - hcp/18); se
+      // vuelve a sumar el offset de la ronda de ESTA instancia.
+      return weight*localComponent + (1-weight)*parComponent + m.off;
     });
     const validExp = expByInstance.filter(v => v !== null);
+    // Esperado de CADA visita (clave 'ronda|hoyo-de-ronda'), con el offset de
+    // hándicap de SU ronda. El detalle de ronda lo necesita: `expected` (abajo)
+    // es la media de todas las visitas, cada una con el offset de su día, y
+    // compararlo con el gross de UNA ronda concreta mezcla niveles de épocas
+    // distintas (octubre 2026, detectado por Pau).
+    const expByRound = {};
+    items.forEach((h,i) => { if (expByInstance[i] !== null) expByRound[h.r+'|'+h.h] = expByInstance[i]; });
     const expected = validExp.length ? mean(validExp) : null;
 
     const avgScore = mean(items.map(h=>h.g));
@@ -4593,7 +4645,7 @@ function computeHoleExpectedAgg(holes, includeIdxSet){
     const penRate = items.filter(h=>h.pen===1||h.lost===1).length/n*100;
     const doubleCount = items.filter(h=>(h.g-h.p)>=2).length;
 
-    return {rc:g.rc, rh:g.rh, par:g.par, si:siDisp, times:n, avgScore, expected, vsExpected,
+    return {rc:g.rc, rh:g.rh, par:g.par, si:siDisp, times:n, avgScore, expected, expByRound, vsExpected,
       recentAvg, trend, doubleCount, blowupRate, damage, firPct, girPct, avgPutts, penRate};
   }).filter(Boolean);
 }
@@ -7908,7 +7960,11 @@ function renderRoundHoleTable(rHoles, rShots){
   rShots.forEach(s => { if (s.sg!==null && s.sg!==undefined) sgByHole[s.h] = (sgByHole[s.h]||0) + s.sg; });
   const rows = rHoles.map(h => {
     const agg = HOLE_AGG_FULL_MAP[h.rc+'|'+h.rh];
-    const vsExpected = (agg && agg.expected!==null) ? h.g - agg.expected : null;
+    // Esperado de ESTA ronda (con su hándicap de campo), no la media de todas
+    // las visitas al hoyo: con hándicaps que han bajado de ~24 a ~13, esa
+    // media inflaba el esperado y el Vs Expected salía artificialmente bueno.
+    const expThisRound = (agg && agg.expByRound) ? agg.expByRound[h.r+'|'+h.h] : undefined;
+    const vsExpected = (expThisRound!==undefined) ? h.g - expThisRound : null;
     // Vs Histórico: SIEMPRE contra otras visitas a este mismo hoyo físico,
     // excluyendo la propia ronda seleccionada -- reportado por Pau: usar
     // agg.avgScore tal cual (que SÍ incluye la ronda actual, correcto para
