@@ -944,7 +944,7 @@
      body's scrollLeft onto it on every scroll event. Header and body always
      end up at the same horizontal offset, with exactly one visible
      scrollbar, regardless of what the vertical scrollbar happens to cost. */
-  .rounds-table { table-layout: fixed; width: 915px; border-collapse: collapse; }
+  .rounds-table { table-layout: fixed; width: 985px; border-collapse: collapse; }
   .rounds-head-scroll { overflow: hidden; }
   .rounds-body-scroll { max-height: 280px; overflow: auto; }
   tr.round-row { cursor: pointer; }
@@ -1452,18 +1452,18 @@
 
   <section>
     <div class="section-head">
-      <h2><span class="tip-trigger" tabindex="0"><span>Rondas</span><span class="info-dot">i</span><span class="info-tooltip">Todas las rondas de esta selección, más recientes primero &mdash; haz scroll para ver las anteriores. <b>Par</b>, <b>Gross</b>, <b>Net</b>, <b>Stableford</b> y <b>Hcp</b> son las cifras oficiales de Shot Scope para la ronda completa. <b>Dif.</b> es el diferencial de puntuación oficial del WHS de esa ronda -- (113/Slope) × (Resultado ajustado &minus; Valor de Campo), NO simplemente Gross &minus; Par (eso ignoraría la dificultad del campo y el tope de Net Double Bogey por hoyo) -- el mismo cálculo que alimenta "Nivel jugado" y "Hándicap calculado" en el Resumen; vueltas de 9 hoyos usan la misma aproximación de doblado que esos dos. <b>Problema principal</b> lista las categorías de SG (Tee/Approach/Short Game/Putting) en &le; -2 SG en esa ronda &mdash; puede haber varias o ninguna. Haz clic en una fila para ver su detalle completo debajo.</span></span></h2>
+      <h2><span class="tip-trigger" tabindex="0"><span>Rondas</span><span class="info-dot">i</span><span class="info-tooltip">Todas las rondas de esta selección, más recientes primero &mdash; haz scroll para ver las anteriores. <b>Par</b>, <b>Gross</b>, <b>Net</b>, <b>Stableford</b> y <b>Hcp</b> son las cifras oficiales de Shot Scope para la ronda completa. <b>STB/hoyo</b> = puntos Stableford ÷ hoyos jugados: es comparable entre rondas de 9 y de 18 hoyos (2,00 = jugar justo a tu hándicap de ese día; como se mide contra tu hándicap, sirve sobre todo para comparar rondas cercanas en el tiempo). <b>Dif.</b> es el diferencial de puntuación oficial del WHS de esa ronda -- (113/Slope) × (Resultado ajustado &minus; Valor de Campo), NO simplemente Gross &minus; Par (eso ignoraría la dificultad del campo y el tope de Net Double Bogey por hoyo) -- el mismo cálculo que alimenta "Nivel jugado" y "Hándicap calculado" en el Resumen; vueltas de 9 hoyos usan la misma aproximación de doblado que esos dos. <b>Problema principal</b> lista las categorías de SG (Tee/Approach/Short Game/Putting) en &le; -2 SG en esa ronda &mdash; puede haber varias o ninguna. Haz clic en una fila para ver su detalle completo debajo.</span></span></h2>
     </div>
     <div class="card rounds-scroll">
       <div class="rounds-head-scroll" id="roundsHeadScroll">
         <table class="rounds-table" id="roundsListHeadTable">
           <colgroup>
             <col style="width:90px"><col style="width:145px"><col style="width:60px"><col style="width:55px">
-            <col style="width:55px"><col style="width:65px"><col style="width:65px"><col style="width:85px">
+            <col style="width:55px"><col style="width:65px"><col style="width:65px"><col style="width:85px"><col style="width:70px">
             <col style="width:75px"><col style="width:60px"><col style="width:160px">
           </colgroup>
           <thead>
-            <tr><th>Fecha</th><th>Campo</th><th class="num">Hoyos</th><th class="num">Par</th><th class="num">Hcp</th><th class="num">Gross</th><th class="num">Net</th><th class="num">Stableford</th><th class="num">SG Total</th><th class="num">Dif.</th><th>Problema principal</th></tr>
+            <tr><th>Fecha</th><th>Campo</th><th class="num">Hoyos</th><th class="num">Par</th><th class="num">Hcp</th><th class="num">Gross</th><th class="num">Net</th><th class="num">Stableford</th><th class="num">STB/hoyo</th><th class="num">SG Total</th><th class="num">Dif.</th><th>Problema principal</th></tr>
           </thead>
         </table>
       </div>
@@ -1471,7 +1471,7 @@
         <table class="rounds-table">
           <colgroup>
             <col style="width:90px"><col style="width:145px"><col style="width:60px"><col style="width:55px">
-            <col style="width:55px"><col style="width:65px"><col style="width:65px"><col style="width:85px">
+            <col style="width:55px"><col style="width:65px"><col style="width:65px"><col style="width:85px"><col style="width:70px">
             <col style="width:75px"><col style="width:60px"><col style="width:160px">
           </colgroup>
           <tbody id="roundsListBody"></tbody>
@@ -1870,12 +1870,12 @@
 
   <section>
     <div class="section-head">
-      <h2><span class="tip-trigger" tabindex="0"><span>Campos</span><span class="info-dot">i</span><span class="info-tooltip">Un campo por fila (los tres recorridos de La Sella cuentan como campos separados, igual que en el filtro de Campo de arriba). <b>Par</b>, <b>Gross</b>, <b>Net</b>, <b>Stableford</b> y <b>SG Total</b> son la media de esa parte del campo en cada visita (vs. par); si una ronda combina dos recorridos, cada uno cuenta solo su propia parte. Si un campo tiene visitas de 9 y 18 hoyos mezcladas (marcado con "norm. 18h" -- hoy en día, solo Oliva Nova), esos cinco se normalizan a un equivalente de 18 hoyos por visita antes de promediar, para que no salgan valores sin sentido a medio camino entre una vuelta de 9 y una de 18. <b>GIR %</b> está restringido a los hoyos de este campo dentro de cada visita (ya es un porcentaje por hoyo, no necesita normalizarse). <b>Nivel jugado</b> es el diferencial de puntuación oficial del WHS de cada visita, calculado solo con los hoyos de este recorrido (aunque esa visita combinara dos recorridos de La Sella el mismo día) y su propio Valor de Campo/Slope individual, promediado sobre todas las visitas. <b>Avg (last 3)</b> = media de SG Total de las últimas 3 visitas a este campo (o menos, si hay menos de 3). <b>Trend</b> = Avg (last 3) &minus; SG Total; aquí, a diferencia de las tablas de hoyos, positivo = mejorando (SG Total más alto es mejor). Haz clic en una fila para ver su detalle debajo.</span></span></h2>
+      <h2><span class="tip-trigger" tabindex="0"><span>Campos</span><span class="info-dot">i</span><span class="info-tooltip">Un campo por fila (los tres recorridos de La Sella cuentan como campos separados, igual que en el filtro de Campo de arriba). <b>Par</b>, <b>Gross</b>, <b>Net</b>, <b>Stableford</b> y <b>SG Total</b> son la media de esa parte del campo en cada visita (vs. par); si una ronda combina dos recorridos, cada uno cuenta solo su propia parte. Si un campo tiene visitas de 9 y 18 hoyos mezcladas (marcado con "norm. 18h" -- hoy en día, solo Oliva Nova), esos cinco se normalizan a un equivalente de 18 hoyos por visita antes de promediar, para que no salgan valores sin sentido a medio camino entre una vuelta de 9 y una de 18. <b>STB/hoyo</b> = puntos Stableford de todas las visitas ÷ hoyos jugados en ellas (ponderado por hoyos, así que no necesita normalizarse y vale también para campos con visitas de 9 y 18; 2,00 = jugar justo a tu hándicap de cada día). <b>GIR %</b> está restringido a los hoyos de este campo dentro de cada visita (ya es un porcentaje por hoyo, no necesita normalizarse). <b>Nivel jugado</b> es el diferencial de puntuación oficial del WHS de cada visita, calculado solo con los hoyos de este recorrido (aunque esa visita combinara dos recorridos de La Sella el mismo día) y su propio Valor de Campo/Slope individual, promediado sobre todas las visitas. <b>Avg (last 3)</b> = media de SG Total de las últimas 3 visitas a este campo (o menos, si hay menos de 3). <b>Trend</b> = Avg (last 3) &minus; SG Total; aquí, a diferencia de las tablas de hoyos, positivo = mejorando (SG Total más alto es mejor). Haz clic en una fila para ver su detalle debajo.</span></span></h2>
     </div>
     <div class="card table-scroll">
       <table id="coursesTable">
         <thead>
-          <tr><th>Campo</th><th class="num">N</th><th class="num">Par</th><th class="num">Gross</th><th class="num">Net</th><th class="num">Stableford</th><th class="num">SG Total</th><th class="num">Avg (last 3)</th><th class="num">Trend</th><th class="num">GIR %</th><th class="num">Nivel jugado</th></tr>
+          <tr><th>Campo</th><th class="num">N</th><th class="num">Par</th><th class="num">Gross</th><th class="num">Net</th><th class="num">Stableford</th><th class="num">STB/hoyo</th><th class="num">SG Total</th><th class="num">Avg (last 3)</th><th class="num">Trend</th><th class="num">GIR %</th><th class="num">Nivel jugado</th></tr>
         </thead>
         <tbody id="coursesListBody"></tbody>
       </table>
@@ -7491,7 +7491,7 @@ function bindRoundsHeaderScrollSync(){
 
 // Un accessor por columna del <thead> de #roundsListBody, en el mismo orden
 // (ver el <thead> de "Rondas" en el HTML). `null` no está permitido aquí --
-// las 11 columnas son sorteables, incluida "Problema principal" como texto.
+// las 12 columnas son sorteables, incluida "Problema principal" como texto.
 const ROUNDS_LIST_SORT_COLUMNS = [
   {key:'date', accessor:r=>r.d, numeric:false, initialDir:'desc'},
   {key:'course', accessor:r=>(r.rc||[]).map(rc=>REAL_COURSE_LABEL[rc]||rc).join(' + '), numeric:false, initialDir:'asc'},
@@ -7501,6 +7501,7 @@ const ROUNDS_LIST_SORT_COLUMNS = [
   {key:'gross', accessor:r=>{ const par=ROUND_PAR_BY_IDX[r.idx]; return (par!==undefined&&par!==null) ? r.gr-par : null; }, numeric:true, initialDir:'asc'},
   {key:'net', accessor:r=>{ const par=ROUND_PAR_BY_IDX[r.idx]; return (par!==undefined&&par!==null) ? r.net-par : null; }, numeric:true, initialDir:'asc'},
   {key:'stb', accessor:r=>r.stb, numeric:true, initialDir:'desc'},
+  {key:'stbPerHole', accessor:r=>(r.nh ? r.stb/r.nh : null), numeric:true, initialDir:'desc'},
   {key:'sg', accessor:r=>r.sg_total, numeric:true, initialDir:'desc'},
   {key:'diff', accessor:r=>scoreDifferentialForRound(r, r.idx), numeric:true, initialDir:'asc'},
   {key:'issues', accessor:r=>mainIssuesForRound(r.idx).join(', '), numeric:false, initialDir:'asc'},
@@ -7510,7 +7511,7 @@ function renderRoundsListTable(rounds){
   const tbody = document.getElementById('roundsListBody');
   tbody.innerHTML = '';
   if (!rounds.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="11">No hay rondas en esta selección.</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="12">No hay rondas en esta selección.</td></tr>';
     return;
   }
   const defaultOrder = rounds.slice().reverse(); // most recent first, per Pau's spec -- kept as the built-in order until a header is clicked
@@ -7532,6 +7533,7 @@ function renderRoundsListTable(rounds){
     const tournBadge = r.tc ? '<span class="tourn-badge" title="Ronda de torneo/competición">🏆</span>' : '';
     tr.innerHTML = `<td class="date-cell">${tournBadge}${fmtDateShort(r.d)}</td><td>${courseLabel}</td><td class="num">${r.nh}</td><td class="num">${par??'—'}</td>
       <td class="num">${r.hcp}</td><td class="num">${fmtToPar(grToPar)}</td><td class="num">${fmtToPar(netToPar)}</td><td class="num">${r.stb}</td>
+      <td class="num">${r.nh ? (r.stb/r.nh).toFixed(2) : '—'}</td>
       <td class="num" style="color:${r.sg_total>=0?'var(--good)':'var(--critical)'}">${fmtSigned(r.sg_total,2)}</td>
       <td class="num">${diff===null?'—':diff.toFixed(1)}</td>
       <td>${issuesTxt}</td>`;
@@ -7550,7 +7552,7 @@ function renderRoundDetailHeader(rRound){
   const netTxt = par!==undefined && par!==null ? fmtToPar(rRound.net-par) : rRound.net;
   const diff = scoreDifferentialForRound(rRound, rRound.idx);
   const diffTxt = diff===null ? '—' : diff.toFixed(1);
-  el.textContent = `${rRound.d} · ${courseLabel} · ${rRound.nh} holes · Hcp ${rRound.hcp} · Gross ${grTxt} · Net ${netTxt} · Stableford ${rRound.stb} · SG Total ${fmtSigned(rRound.sg_total,2)} · Dif. ${diffTxt}`;
+  el.textContent = `${rRound.d} · ${courseLabel} · ${rRound.nh} holes · Hcp ${rRound.hcp} · Gross ${grTxt} · Net ${netTxt} · Stableford ${rRound.stb} (${rRound.nh ? (rRound.stb/rRound.nh).toFixed(2) : '—'}/hoyo) · SG Total ${fmtSigned(rRound.sg_total,2)} · Dif. ${diffTxt}`;
 }
 
 // Repeats "Fecha · Campo" next to the title of the 3 round-detail sections
@@ -8322,11 +8324,15 @@ function computeCoursesSummary(rounds, holes, shots){
     const sgRecentAvg = mean(sgVisitsOrdered.slice(-3));
     const sgTrend = sgRecentAvg - sgTotalAvg;
     const girPct = stats.courseHoles.length ? mean(stats.courseHoles.map(h=>h.gir))*100 : null;
+    // STB/hoyo: puntos Stableford de TODAS las visitas / hoyos jugados en ellas
+    // (ponderado por hoyos, no media de ratios por visita) -- no necesita la
+    // normalización a 18 hoyos, así que también vale para campos mixtos.
+    const stbPerHole = stats.courseHoles.length ? stats.courseHoles.reduce((a,h)=>a+h.stb,0) / stats.courseHoles.length : null;
     const nivelJugado = courseNivelJugado(stats);
     return {
       rc, label: REAL_COURSE_LABEL[rc]||rc, n: rawVisitEntries.length,
       par: Math.round(parAvg), grossToPar: grossAvg-parAvg, netToPar: netAvg-parAvg,
-      stbAvg, sgTotalAvg, sgRecentAvg, sgTrend, girPct, nivelJugado, mixedHoleCounts: mixed, stats,
+      stbAvg, stbPerHole, sgTotalAvg, sgRecentAvg, sgTrend, girPct, nivelJugado, mixedHoleCounts: mixed, stats,
     };
   });
 }
@@ -8372,7 +8378,7 @@ function setCourseHoleWindowNote(elId, visitingRounds, effVisitRounds, windowSta
 let courseEvoNormalized = false;
 
 // Un accessor por columna del <thead> de #coursesTable, mismo orden que el
-// <thead> en el HTML (Campo, N, Par, Gross, Net, Stableford, SG Total,
+// <thead> en el HTML (Campo, N, Par, Gross, Net, Stableford, STB/hoyo, SG Total,
 // Avg (last 3), Trend, GIR %, Nivel jugado) -- tabla única (sin split
 // header/body como Rondas), así que setupSortableTable no necesita
 // headTableId aquí.
@@ -8383,6 +8389,7 @@ const COURSES_LIST_SORT_COLUMNS = [
   {key:'gross', accessor:c=>c.grossToPar, numeric:true, initialDir:'asc'},
   {key:'net', accessor:c=>c.netToPar, numeric:true, initialDir:'asc'},
   {key:'stb', accessor:c=>c.stbAvg, numeric:true, initialDir:'desc'},
+  {key:'stbPerHole', accessor:c=>c.stbPerHole, numeric:true, initialDir:'desc'},
   {key:'sg', accessor:c=>c.sgTotalAvg, numeric:true, initialDir:'desc'},
   {key:'sgRecentAvg', accessor:c=>c.sgRecentAvg, numeric:true, initialDir:'desc'},
   {key:'sgTrend', accessor:c=>c.sgTrend, numeric:true, initialDir:'desc'},
@@ -8394,7 +8401,7 @@ function renderCoursesListTable(courses){
   const tbody = document.getElementById('coursesListBody');
   tbody.innerHTML = '';
   if (!courses.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="11">No hay campos en esta selección.</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="12">No hay campos en esta selección.</td></tr>';
     return;
   }
   const rows = sortRows('coursesListBody', courses, COURSES_LIST_SORT_COLUMNS);
@@ -8409,6 +8416,7 @@ function renderCoursesListTable(courses){
     const trendColor = c.sgTrend>=0.15 ? 'var(--good)' : (c.sgTrend<=-0.15 ? 'var(--critical)' : 'var(--muted)');
     tr.innerHTML = `<td>${c.label}${mixMark}</td><td class="num">${c.n}</td><td class="num">${c.par}</td>
       <td class="num">${fmtToPar(c.grossToPar,1)}</td><td class="num">${fmtToPar(c.netToPar,1)}</td><td class="num">${c.stbAvg.toFixed(1)}</td>
+      <td class="num">${c.stbPerHole===null ? '—' : c.stbPerHole.toFixed(2)}</td>
       <td class="num" style="color:${c.sgTotalAvg>=0?'var(--good)':'var(--critical)'}">${fmtSigned(c.sgTotalAvg,2)}</td>
       <td class="num" style="color:${c.sgRecentAvg>=0?'var(--good)':'var(--critical)'}">${fmtSigned(c.sgRecentAvg,2)}</td>
       <td class="num"><span style="color:${trendColor}">${fmtSigned(c.sgTrend,2)}</span></td>
@@ -8424,7 +8432,7 @@ function renderCoursesListTable(courses){
 function renderCourseDetailHeader(c){
   const el = document.getElementById('courseDetailHead');
   const nivelTxt = c.nivelJugado===null ? '—' : c.nivelJugado.toFixed(1);
-  el.textContent = `${c.label} · ${c.n} visita${c.n===1?'':'s'} · Par ${c.par} · Gross ${fmtToPar(c.grossToPar)} · Net ${fmtToPar(c.netToPar)} · Stableford ${c.stbAvg.toFixed(1)} · SG Total ${fmtSigned(c.sgTotalAvg,2)} · Nivel jugado ${nivelTxt}`;
+  el.textContent = `${c.label} · ${c.n} visita${c.n===1?'':'s'} · Par ${c.par} · Gross ${fmtToPar(c.grossToPar)} · Net ${fmtToPar(c.netToPar)} · Stableford ${c.stbAvg.toFixed(1)} (${c.stbPerHole===null ? '—' : c.stbPerHole.toFixed(2)}/hoyo) · SG Total ${fmtSigned(c.sgTotalAvg,2)} · Nivel jugado ${nivelTxt}`;
   const noteEl = document.getElementById('courseDetailNormNote');
   if (noteEl) {
     noteEl.textContent = c.mixedHoleCounts
